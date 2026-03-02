@@ -1,0 +1,15 @@
+<svg width="400" height="400" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="avatarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#EFF6FF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#DBEAFE;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#avatarGrad)"/>
+  
+  <!-- Avatar -->
+  <circle cx="200" cy="150" r="50" fill="#3B82F6"/>
+  <ellipse cx="200" cy="280" rx="70" ry="90" fill="#3B82F6"/>
+  
+  <text x="200" y="350" text-anchor="middle" fill="#1D4ED8" font-family="Arial, sans-serif" font-size="16" font-weight="bold">Professional Avatar</text>
+</svg>

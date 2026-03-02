@@ -1,0 +1,32 @@
+{
+  "name": "Madiun Photography - Professional Photography Services",
+  "short_name": "Madiun Photo",
+  "description": "Professional photography services for weddings, portraits, events, and more. Capturing your precious moments with artistic vision and technical excellence.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#7c3aed",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["photography", "business", "lifestyle"],
+  "lang": "en",
+  "dir": "ltr"
+}

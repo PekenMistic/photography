@@ -1,0 +1,15 @@
+<svg width="600" height="400" viewBox="0 0 600 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="portraitGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#EFF6FF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#DBEAFE;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="600" height="400" fill="url(#portraitGrad)"/>
+  
+  <!-- Person silhouette -->
+  <circle cx="300" cy="160" r="40" fill="#3B82F6"/>
+  <ellipse cx="300" cy="260" rx="60" ry="80" fill="#3B82F6"/>
+  
+  <text x="300" y="320" text-anchor="middle" fill="#1D4ED8" font-family="Arial, sans-serif" font-size="18" font-weight="bold">Portrait Photography</text>
+</svg>
