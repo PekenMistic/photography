@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Edit, Trash2, Plus, Search, Eye, BookOpen, Heart, Clock } from "lucide-react"
 import Image from "next/image"
 import { useDatabase, type BlogPost } from "@/lib/database-context"
+import { useLuxuryToast } from "@/components/ui/luxury-toast"
 
 const cardCls = "bg-white dark:bg-luxury-charcoal-800 rounded-2xl border border-luxury-charcoal-100 dark:border-luxury-charcoal-700/50 shadow-sm"
 const inputCls = "border-luxury-charcoal-200 dark:border-luxury-charcoal-700 dark:bg-luxury-charcoal-700/50 rounded-xl h-11 text-sm focus:ring-2 focus:ring-luxury-gold-400/30 focus:border-luxury-gold-400 transition-all"
@@ -104,6 +105,7 @@ function BlogForm({ data, onChange, onSubmit, onCancel, loading, isEdit }: {
 
 export default function BlogManager() {
   const { blogPosts, addBlogPost, updateBlogPost, deleteBlogPost } = useDatabase()
+  const toast = useLuxuryToast()
   const [search, setSearch] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null)
@@ -137,21 +139,21 @@ export default function BlogManager() {
 
   const handleAdd = async () => {
     setSubmitting(true)
-    try { await addBlogPost(toPost(formData)); setIsAddOpen(false); setFormData(emptyForm) } catch { } finally { setSubmitting(false) }
+    try { await addBlogPost(toPost(formData)); setIsAddOpen(false); setFormData(emptyForm); toast.success('Post published!', `"${formData.title}" has been created.`) } catch { toast.error('Failed to create post') } finally { setSubmitting(false) }
   }
 
   const handleEdit = async () => {
     if (!selectedPost) return
     setSubmitting(true)
-    try { await updateBlogPost(selectedPost.id, toPost(formData)); setIsEditOpen(false) } catch { } finally { setSubmitting(false) }
+    try { await updateBlogPost(selectedPost.id, toPost(formData)); setIsEditOpen(false); toast.success('Post updated!') } catch { toast.error('Failed to update post') } finally { setSubmitting(false) }
   }
 
   const handleDelete = async (id: string) => {
-    try { await deleteBlogPost(id); setDeleteConfirm(null) } catch { }
+    try { await deleteBlogPost(id); setDeleteConfirm(null); toast.success('Post deleted') } catch { toast.error('Failed to delete post') }
   }
 
   const togglePublished = async (post: BlogPost) => {
-    try { await updateBlogPost(post.id, { published: !post.published }) } catch { }
+    try { await updateBlogPost(post.id, { published: !post.published }); toast.info(post.published ? 'Post unpublished' : 'Post published!') } catch { toast.error('Failed to update post') }
   }
 
   return (
