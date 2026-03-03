@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Star, Edit, Trash2, Plus, Search, Eye, CheckCircle, XCircle } from "lucide-react"
 import { useDatabase, type Review } from "@/lib/database-context"
+import { useLuxuryToast } from "@/components/ui/luxury-toast"
 
 const cardCls = "bg-white dark:bg-luxury-charcoal-800 rounded-2xl border border-luxury-charcoal-100 dark:border-luxury-charcoal-700/50 shadow-sm"
 const inputCls = "border-luxury-charcoal-200 dark:border-luxury-charcoal-700 dark:bg-luxury-charcoal-700/50 rounded-xl h-11 text-sm focus:ring-2 focus:ring-luxury-gold-400/30 focus:border-luxury-gold-400 transition-all"
@@ -111,6 +112,7 @@ function ReviewForm({ data, onChange, onSubmit, onCancel, loading, isEdit }: {
 
 export default function ReviewManager() {
   const { reviews, addReview, updateReview, deleteReview } = useDatabase()
+  const toast = useLuxuryToast()
   const [search, setSearch] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
   const [selectedReview, setSelectedReview] = useState<Review | null>(null)
@@ -143,25 +145,25 @@ export default function ReviewManager() {
 
   const handleAdd = async () => {
     setSubmitting(true)
-    try { await addReview(formData); setIsAddOpen(false); setFormData(emptyForm) } catch { } finally { setSubmitting(false) }
+    try { await addReview(formData); setIsAddOpen(false); setFormData(emptyForm); toast.success('Review added!', `${formData.clientName}'s review has been added.`) } catch { toast.error('Failed to add review') } finally { setSubmitting(false) }
   }
 
   const handleEdit = async () => {
     if (!selectedReview) return
     setSubmitting(true)
-    try { await updateReview(selectedReview.id, formData); setIsEditOpen(false) } catch { } finally { setSubmitting(false) }
+    try { await updateReview(selectedReview.id, formData); setIsEditOpen(false); toast.success('Review updated!') } catch { toast.error('Failed to update review') } finally { setSubmitting(false) }
   }
 
   const handleDelete = async (id: string) => {
-    try { await deleteReview(id); setDeleteConfirm(null); setIsDetailOpen(false) } catch { }
+    try { await deleteReview(id); setDeleteConfirm(null); setIsDetailOpen(false); toast.success('Review deleted') } catch { toast.error('Failed to delete review') }
   }
 
   const toggleApproved = async (r: Review) => {
-    try { await updateReview(r.id, { approved: !r.approved }) } catch { }
+    try { await updateReview(r.id, { approved: !r.approved }); toast.info(r.approved ? 'Review unapproved' : 'Review approved!') } catch { toast.error('Failed to update review') }
   }
 
   const toggleFeatured = async (r: Review) => {
-    try { await updateReview(r.id, { featured: !r.featured }) } catch { }
+    try { await updateReview(r.id, { featured: !r.featured }); toast.info(r.featured ? 'Removed from featured' : 'Marked as featured!') } catch { toast.error('Failed to update review') }
   }
 
   return (
