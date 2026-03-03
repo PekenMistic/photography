@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Mail, Phone, Reply, Trash2, Search, Eye, Clock, CheckCircle, AlertCircle, ChevronUp } from "lucide-react"
 import { useDatabase, type Message } from "@/lib/database-context"
+import { useLuxuryToast } from "@/components/ui/luxury-toast"
 
 const cardCls = "bg-white dark:bg-luxury-charcoal-800 rounded-2xl border border-luxury-charcoal-100 dark:border-luxury-charcoal-700/50 shadow-sm"
 const outlineBtn = "inline-flex items-center gap-2 px-3 py-2 border border-luxury-charcoal-200 dark:border-luxury-charcoal-600 text-luxury-charcoal-700 dark:text-luxury-charcoal-300 text-sm font-medium rounded-xl hover:bg-luxury-charcoal-50 dark:hover:bg-luxury-charcoal-700/50 transition-all duration-200"
@@ -37,6 +38,7 @@ function PriorityBadge({ priority }: { priority: Priority }) {
 
 export default function MessageManager() {
   const { messages, updateMessage, deleteMessage } = useDatabase()
+  const toast = useLuxuryToast()
   const [search, setSearch] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
   const [filterPriority, setFilterPriority] = useState("all")
@@ -77,11 +79,11 @@ export default function MessageManager() {
   }
 
   const handleDelete = async (id: string) => {
-    try { await deleteMessage(id); setDeleteConfirm(null); setIsDetailOpen(false) } catch { }
+    try { await deleteMessage(id); setDeleteConfirm(null); setIsDetailOpen(false); toast.success('Message deleted') } catch { toast.error('Failed to delete message') }
   }
 
   const setPriority = async (id: string, priority: Priority) => {
-    try { await updateMessage(id, { priority }); setSelectedMessage(prev => prev ? { ...prev, priority } : null) } catch { }
+    try { await updateMessage(id, { priority }); setSelectedMessage(prev => prev ? { ...prev, priority } : null); toast.info(`Priority set to ${priority}`) } catch { toast.error('Failed to update priority') }
   }
 
   return (
