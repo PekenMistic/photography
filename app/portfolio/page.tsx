@@ -5,9 +5,9 @@ import Image from "next/image"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Search, Grid, Heart, Share2, ChevronLeft, ChevronRight, Eye, Camera, Loader2 } from "lucide-react"
+import { Search, ChevronLeft, ChevronRight, Eye, Camera, Loader2 } from "lucide-react"
 import { useDatabase } from "@/lib/database-context"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 
 const categories = ["All", "Wedding", "Portrait", "Event", "Family", "Corporate"]
 

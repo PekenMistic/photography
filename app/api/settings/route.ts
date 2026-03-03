@@ -6,7 +6,7 @@ export async function GET() {
   try {
     const settingsList = await db.select().from(settings);
     return NextResponse.json({ success: true, data: settingsList });
-  } catch (error) {
+  } catch (err) {
     return NextResponse.json({ success: false, error: 'Failed to fetch settings' }, { status: 500 });
   }
 }
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     }).returning();
 
     return NextResponse.json({ success: true, data: newSetting[0] });
-  } catch (error) {
+  } catch (err) {
     return NextResponse.json({ success: false, error: 'Failed to create setting' }, { status: 500 });
   }
 }

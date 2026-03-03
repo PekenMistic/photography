@@ -2,7 +2,7 @@
 import { notFound } from "next/navigation"
 import Image from "next/image"
 import Link from "next/link"
-import { Calendar, Clock, User, ArrowLeft, Eye, Heart, Tag } from "lucide-react"
+import { Calendar, Clock, User, ArrowLeft, Eye, Tag } from "lucide-react"
 import { EnhancedButton } from "@/components/ui/enhanced-button"
 
 async function getBlogPost(id: string) {

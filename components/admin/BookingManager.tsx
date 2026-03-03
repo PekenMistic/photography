@@ -18,7 +18,6 @@ const inputCls = "border-luxury-charcoal-200 dark:border-luxury-charcoal-700 dar
 const labelCls = "text-xs font-semibold text-luxury-charcoal-600 dark:text-luxury-charcoal-400 uppercase tracking-wider"
 const primaryBtn = "inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-luxury-gold-500 to-luxury-gold-600 hover:from-luxury-gold-600 hover:to-luxury-gold-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
 const outlineBtn = "inline-flex items-center gap-2 px-3 py-2 border border-luxury-charcoal-200 dark:border-luxury-charcoal-600 text-luxury-charcoal-700 dark:text-luxury-charcoal-300 text-sm font-medium rounded-xl hover:bg-luxury-charcoal-50 dark:hover:bg-luxury-charcoal-700/50 transition-all duration-200"
-const dangerBtn = "inline-flex items-center gap-2 px-3 py-2 text-red-600 dark:text-red-400 text-sm font-medium rounded-xl border border-red-200 dark:border-red-800/50 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200"
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { cls: string; icon: React.ReactNode; label: string }> = {
@@ -334,7 +333,7 @@ export default function BookingManager() {
               </div>
               <div className="flex gap-3 pt-2 border-t border-luxury-charcoal-100 dark:border-luxury-charcoal-700">
                 <button className={outlineBtn} onClick={() => { setIsDetailOpen(false); openEdit(selectedBooking) }}><Edit className="w-4 h-4" />Edit</button>
-                <button className={dangerBtn} onClick={() => { setIsDetailOpen(false); setDeleteConfirm(selectedBooking.id) }}><Trash2 className="w-4 h-4" />Delete</button>
+                <button className={outlineBtn} onClick={() => { setIsDetailOpen(false); setDeleteConfirm(selectedBooking.id) }}><Trash2 className="w-4 h-4" />Delete</button>
                 <button className={`${outlineBtn} ml-auto`} onClick={() => setIsDetailOpen(false)}>Close</button>
               </div>
             </div>

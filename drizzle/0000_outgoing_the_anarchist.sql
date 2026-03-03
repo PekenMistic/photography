@@ -108,7 +108,7 @@ CREATE TABLE "services" (
 CREATE TABLE "settings" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"key" varchar(255) NOT NULL,
-	"value" jsonb,
+	"value" text,
 	"description" text,
 	"created_at" timestamp with time zone DEFAULT now(),
 	"updated_at" timestamp with time zone DEFAULT now(),
@@ -146,3 +146,14 @@ CREATE INDEX "idx_portfolio_created_at" ON "portfolio_items" USING btree ("creat
 CREATE INDEX "idx_reviews_rating" ON "reviews" USING btree ("rating");--> statement-breakpoint
 CREATE INDEX "idx_reviews_featured" ON "reviews" USING btree ("featured");--> statement-breakpoint
 CREATE INDEX "idx_reviews_approved" ON "reviews" USING btree ("approved");
+
+-- Migration: Fix settings.value column type JSONB → TEXT
+-- dan pastikan tabel faqs ada
+
+-- Ubah tipe kolom settings.value dari JSONB ke TEXT
+ALTER TABLE "settings" ALTER COLUMN "value" TYPE TEXT USING value::TEXT;
+
+-- Bersihkan quotes ekstra dari nilai JSONB lama (e.g. '"Madiun Photography"' → 'Madiun Photography')
+UPDATE "settings"
+SET value = TRIM(BOTH '"' FROM value)
+WHERE value LIKE '"%"';

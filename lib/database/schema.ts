@@ -1,7 +1,7 @@
 import { pgTable, uuid, varchar, text, boolean, timestamp, decimal, integer, date, time, jsonb, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
-// Users table
+// ─── Users ────────────────────────────────────────────────────────────────────
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   email: varchar('email', { length: 255 }).notNull().unique(),
@@ -13,7 +13,7 @@ export const users = pgTable('users', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
 
-// Portfolio items table
+// ─── Portfolio Items ──────────────────────────────────────────────────────────
 export const portfolioItems = pgTable('portfolio_items', {
   id: uuid('id').primaryKey().defaultRandom(),
   title: varchar('title', { length: 255 }).notNull(),
@@ -31,7 +31,7 @@ export const portfolioItems = pgTable('portfolio_items', {
   createdAtIdx: index('idx_portfolio_created_at').on(table.createdAt),
 }));
 
-// Services table
+// ─── Services ─────────────────────────────────────────────────────────────────
 export const services = pgTable('services', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: varchar('name', { length: 255 }).notNull(),
@@ -47,7 +47,7 @@ export const services = pgTable('services', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
 
-// Bookings table
+// ─── Bookings ─────────────────────────────────────────────────────────────────
 export const bookings = pgTable('bookings', {
   id: uuid('id').primaryKey().defaultRandom(),
   clientName: varchar('client_name', { length: 255 }).notNull(),
@@ -70,7 +70,7 @@ export const bookings = pgTable('bookings', {
   createdAtIdx: index('idx_bookings_created_at').on(table.createdAt),
 }));
 
-// Messages table
+// ─── Messages ─────────────────────────────────────────────────────────────────
 export const messages = pgTable('messages', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: varchar('name', { length: 255 }).notNull(),
@@ -88,7 +88,7 @@ export const messages = pgTable('messages', {
   createdAtIdx: index('idx_messages_created_at').on(table.createdAt),
 }));
 
-// Reviews table
+// ─── Reviews ──────────────────────────────────────────────────────────────────
 export const reviews = pgTable('reviews', {
   id: uuid('id').primaryKey().defaultRandom(),
   clientName: varchar('client_name', { length: 255 }).notNull(),
@@ -111,7 +111,9 @@ export const reviews = pgTable('reviews', {
   approvedIdx: index('idx_reviews_approved').on(table.approved),
 }));
 
-// Blog posts table
+// ─── Blog Posts ───────────────────────────────────────────────────────────────
+// FIX: Removed slug/featured_image/author_id (dari schema.sql lama yang sudah obsolete)
+// Kolom yang dipakai: author (string), date, readTime, image, views, likes
 export const blogPosts = pgTable('blog_posts', {
   id: uuid('id').primaryKey().defaultRandom(),
   title: varchar('title', { length: 255 }).notNull(),
@@ -135,17 +137,22 @@ export const blogPosts = pgTable('blog_posts', {
   createdAtIdx: index('idx_blog_created_at').on(table.createdAt),
 }));
 
-// Settings table
+// ─── Settings ─────────────────────────────────────────────────────────────────
+// FIX KRITIS: value diubah dari JSONB → TEXT
+// Alasan: context & API memperlakukan value sebagai string biasa.
+// JSONB menyebabkan double-encode (string di-JSON.stringify lalu disimpan sebagai JSONB)
+// sehingga saat dibaca kembali nilainya menjadi '"nilai"' bukan 'nilai'
 export const settings = pgTable('settings', {
   id: uuid('id').primaryKey().defaultRandom(),
   key: varchar('key', { length: 255 }).notNull().unique(),
-  value: jsonb('value'),
+  value: text('value'),  // ← TEXT bukan JSONB
   description: text('description'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
 });
 
-// FAQs table
+// ─── FAQs ─────────────────────────────────────────────────────────────────────
+// FIX: Tabel ini ada di schema.ts & Drizzle migration tapi TIDAK ADA di schema.sql lama
 export const faqs = pgTable('faqs', {
   id: uuid('id').primaryKey().defaultRandom(),
   question: text('question').notNull(),
@@ -160,11 +167,7 @@ export const faqs = pgTable('faqs', {
   orderIdx: index('idx_faq_order').on(table.order),
 }));
 
-// Relations
-export const usersRelations = relations(users, ({ many }) => ({
-  blogPosts: many(blogPosts),
-}));
-
+// ─── Relations ────────────────────────────────────────────────────────────────
 export const servicesRelations = relations(services, ({ many }) => ({
   bookings: many(bookings),
 }));
@@ -184,32 +187,22 @@ export const reviewsRelations = relations(reviews, ({ one }) => ({
   }),
 }));
 
-// Removed blog posts relations since we removed authorId field
-
-// Types
+// ─── Types ────────────────────────────────────────────────────────────────────
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
-
 export type PortfolioItem = typeof portfolioItems.$inferSelect;
 export type NewPortfolioItem = typeof portfolioItems.$inferInsert;
-
 export type Service = typeof services.$inferSelect;
 export type NewService = typeof services.$inferInsert;
-
 export type Booking = typeof bookings.$inferSelect;
 export type NewBooking = typeof bookings.$inferInsert;
-
 export type Message = typeof messages.$inferSelect;
 export type NewMessage = typeof messages.$inferInsert;
-
 export type Review = typeof reviews.$inferSelect;
 export type NewReview = typeof reviews.$inferInsert;
-
 export type BlogPost = typeof blogPosts.$inferSelect;
 export type NewBlogPost = typeof blogPosts.$inferInsert;
-
 export type Setting = typeof settings.$inferSelect;
 export type NewSetting = typeof settings.$inferInsert;
-
 export type FAQ = typeof faqs.$inferSelect;
 export type NewFAQ = typeof faqs.$inferInsert;

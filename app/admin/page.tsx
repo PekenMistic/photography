@@ -1,13 +1,12 @@
+ 
 "use client"
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Camera, Users, MessageSquare, Calendar, Settings, BarChart3,
   Shield, LogOut, TrendingUp, Star, DollarSign, Menu, BookOpen,
-  HelpCircle, X, ChevronRight
+  HelpCircle, ChevronRight
 } from "lucide-react"
 import PortfolioManager from "@/components/admin/PortfolioManager"
 import BookingManager from "@/components/admin/BookingManager"
@@ -50,7 +49,7 @@ export default function AdminDashboard() {
   const [activeSection, setActiveSection] = useState("overview")
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [loginError, setLoginError] = useState("")
-  const { stats, portfolioItems, bookings, messages, error } = useDatabase()
+  const { stats, portfolioItems, error } = useDatabase()
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()

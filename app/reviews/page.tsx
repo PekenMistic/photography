@@ -1,14 +1,14 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { Star, Users, Camera, Heart, Loader2, MessageSquare } from "lucide-react"
+import { Star, MessageSquare } from "lucide-react"
 import { useDatabase } from "@/lib/database-context"
 import LuxuryTestimonials from "@/components/luxury/LuxuryTestimonials"
 import ReviewForm from "@/components/ReviewForm"
 import { EnhancedCard, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/enhanced-card"
 
 export default function ReviewsPage() {
-  const { reviews, loading, stats } = useDatabase()
+  const { reviews, loading } = useDatabase()
 
   const approvedReviews = reviews.filter(r => r.approved)
   const avgRating = approvedReviews.length > 0

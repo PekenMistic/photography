@@ -1,6 +1,6 @@
 "use client"
 import { motion } from "framer-motion"
-import { Check, Star, Camera, ArrowRight, Zap } from "lucide-react"
+import { Check, Camera, ArrowRight, Zap } from "lucide-react"
 import { EnhancedButton } from "@/components/ui/enhanced-button"
 import Link from "next/link"
 

@@ -13,7 +13,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Setting not found' }, { status: 404 });
     }
     return NextResponse.json({ success: true, data: setting[0] });
-  } catch (error) {
+  } catch (err) {
     return NextResponse.json({ success: false, error: 'Failed to fetch setting' }, { status: 500 });
   }
 }
@@ -49,7 +49,7 @@ export async function PUT(
       .returning();
 
     return NextResponse.json({ success: true, data: updated[0] });
-  } catch (error) {
+  } catch (err) {
     return NextResponse.json({ success: false, error: 'Failed to update setting' }, { status: 500 });
   }
 }
@@ -64,7 +64,7 @@ export async function DELETE(
       return NextResponse.json({ success: false, error: 'Setting not found' }, { status: 404 });
     }
     return NextResponse.json({ success: true, message: 'Setting deleted successfully' });
-  } catch (error) {
+  } catch (err) {
     return NextResponse.json({ success: false, error: 'Failed to delete setting' }, { status: 500 });
   }
 }
