@@ -1,478 +1,505 @@
-﻿"use client"
+"use client"
 
 import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Save, Settings, Globe, Phone, Palette, Camera } from "lucide-react"
-import { useDatabase } from "@/lib/database-context"
-import { toast } from "sonner"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import {
+  Save, Settings, Globe, Phone, Palette, Camera, Plus, Edit, Trash2,
+  Search, AlertCircle, CheckCircle, Code, User, RefreshCw
+} from "lucide-react"
+import { useDatabase, type Setting } from "@/lib/database-context"
+import { useLuxuryToast } from "@/components/ui/luxury-toast"
 
+const cardCls = "bg-white dark:bg-luxury-charcoal-800 rounded-2xl border border-luxury-charcoal-100 dark:border-luxury-charcoal-700/50 shadow-sm"
+const inputCls = "border-luxury-charcoal-200 dark:border-luxury-charcoal-700 dark:bg-luxury-charcoal-700/50 rounded-xl h-11 text-sm focus:ring-2 focus:ring-luxury-gold-400/30 focus:border-luxury-gold-400 transition-all"
+const labelCls = "text-xs font-semibold text-luxury-charcoal-600 dark:text-luxury-charcoal-400 uppercase tracking-wider"
+const primaryBtn = "inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-luxury-gold-500 to-luxury-gold-600 hover:from-luxury-gold-600 hover:to-luxury-gold-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-all duration-200 disabled:opacity-50"
+const outlineBtn = "inline-flex items-center gap-2 px-3 py-2 border border-luxury-charcoal-200 dark:border-luxury-charcoal-600 text-luxury-charcoal-700 dark:text-luxury-charcoal-300 text-sm font-medium rounded-xl hover:bg-luxury-charcoal-50 dark:hover:bg-luxury-charcoal-700/50 transition-all duration-200"
+const dangerBtn = "inline-flex items-center gap-2 px-3 py-2 text-red-600 dark:text-red-400 text-sm font-medium rounded-xl border border-red-200 dark:border-red-800/50 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200"
+
+// ── Section groups ─────────────────────────────────────────────────────────────
+const SETTING_GROUPS = [
+  {
+    key: "general", label: "General", icon: Settings, color: "text-luxury-charcoal-600",
+    fields: [
+      { key: "site_title", label: "Site Title", type: "text", placeholder: "Madiun Photography", description: "Displayed in browser tab and search results" },
+      { key: "business_name", label: "Business Name", type: "text", placeholder: "Madiun Photography Studio" },
+      { key: "business_tagline", label: "Tagline", type: "text", placeholder: "Capturing Life's Most Precious Moments" },
+      { key: "site_description", label: "Site Description", type: "textarea", placeholder: "Professional photography services…" },
+      { key: "business_about", label: "About Business", type: "textarea", placeholder: "Tell visitors about your business…" },
+    ]
+  },
+  {
+    key: "contact", label: "Contact", icon: Phone, color: "text-blue-600",
+    fields: [
+      { key: "contact_email", label: "Email Address", type: "email", placeholder: "info@madiunphotography.com" },
+      { key: "contact_phone", label: "Phone Number", type: "text", placeholder: "+62 xxx xxxx xxxx" },
+      { key: "contact_whatsapp", label: "WhatsApp", type: "text", placeholder: "+62 xxx xxxx xxxx" },
+      { key: "contact_address", label: "Business Address", type: "textarea", placeholder: "Jl. Photography No. 1, Madiun…" },
+      { key: "contact_hours", label: "Business Hours", type: "text", placeholder: "Mon-Fri: 09:00–18:00, Sat: 10:00–16:00" },
+    ]
+  },
+  {
+    key: "social", label: "Social Media", icon: Globe, color: "text-teal-600",
+    fields: [
+      { key: "social_instagram", label: "Instagram URL", type: "url", placeholder: "https://instagram.com/yourhandle" },
+      { key: "social_facebook", label: "Facebook URL", type: "url", placeholder: "https://facebook.com/yourpage" },
+      { key: "social_tiktok", label: "TikTok URL", type: "url", placeholder: "https://tiktok.com/@yourhandle" },
+      { key: "social_youtube", label: "YouTube URL", type: "url", placeholder: "https://youtube.com/yourchannel" },
+      { key: "social_twitter", label: "Twitter / X URL", type: "url", placeholder: "https://x.com/yourhandle" },
+    ]
+  },
+  {
+    key: "booking", label: "Booking", icon: Camera, color: "text-luxury-gold-600",
+    fields: [
+      { key: "booking_enabled", label: "Enable Online Booking", type: "toggle", placeholder: "true" },
+      { key: "booking_advance_days", label: "Minimum Advance Days", type: "number", placeholder: "7" },
+      { key: "booking_deposit_percentage", label: "Deposit Percentage (%)", type: "number", placeholder: "25" },
+      { key: "booking_confirmation_email", label: "Confirmation Email Message", type: "textarea", placeholder: "Thank you for booking with us…" },
+    ]
+  },
+  {
+    key: "seo", label: "SEO", icon: Code, color: "text-purple-600",
+    fields: [
+      { key: "seo_meta_title", label: "Meta Title", type: "text", placeholder: "Madiun Photography | Professional Photography Services" },
+      { key: "seo_meta_description", label: "Meta Description", type: "textarea", placeholder: "Professional photography services in Madiun…" },
+      { key: "seo_keywords", label: "Keywords", type: "text", placeholder: "photography, wedding, portrait, madiun" },
+      { key: "seo_og_image", label: "OG Image URL", type: "url", placeholder: "https://…/og-image.jpg" },
+    ]
+  },
+]
+
+const VALUE_TYPES = ["text", "number", "url", "email", "toggle", "textarea", "color"]
+
+// ── Alert component ────────────────────────────────────────────────────────────
+function Alert({ type, title, message, onDismiss }: { type: "success" | "error" | "warning" | "info"; title: string; message?: string; onDismiss: () => void }) {
+  const cfg = {
+    success: { bg: "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800/50", icon: <CheckCircle className="w-4 h-4 text-emerald-500" />, text: "text-emerald-700 dark:text-emerald-400" },
+    error: { bg: "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/50", icon: <AlertCircle className="w-4 h-4 text-red-500" />, text: "text-red-700 dark:text-red-400" },
+    warning: { bg: "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800/50", icon: <AlertCircle className="w-4 h-4 text-amber-500" />, text: "text-amber-700 dark:text-amber-400" },
+    info: { bg: "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50", icon: <AlertCircle className="w-4 h-4 text-blue-500" />, text: "text-blue-700 dark:text-blue-400" },
+  }[type]
+  return (
+    <div className={`flex items-start gap-3 border rounded-xl px-4 py-3 ${cfg.bg}`}>
+      {cfg.icon}
+      <div className="flex-1">
+        <p className={`text-sm font-semibold ${cfg.text}`}>{title}</p>
+        {message && <p className={`text-xs mt-0.5 opacity-80 ${cfg.text}`}>{message}</p>}
+      </div>
+      <button onClick={onDismiss} className={`text-sm ${cfg.text} opacity-60 hover:opacity-100`}>✕</button>
+    </div>
+  )
+}
+
+// ── Main Component ─────────────────────────────────────────────────────────────
 export default function SettingsManager() {
-  const { settings, updateSetting, loading, error } = useDatabase()
+  const { settings, updateSetting, loading, error, refreshSettings } = useDatabase()
+  const toast = useLuxuryToast()
 
-  const [formData, setFormData] = useState<Record<string, unknown>>({})
-  const [saving, setSaving] = useState(false)
+  const [activeGroup, setActiveGroup] = useState("general")
+  const [search, setSearch] = useState("")
+  const [localValues, setLocalValues] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState<Record<string, boolean>>({})
+  const [saved, setSaved] = useState<Record<string, boolean>>({})
+  const [groupSaving, setGroupSaving] = useState(false)
+  const [alert, setAlert] = useState<{ type: "success" | "error" | "warning"; title: string; message?: string } | null>(null)
 
-  // Initialize form data from settings
+  // Custom settings CRUD
+  const [customSettings, setCustomSettings] = useState<Setting[]>([])
+  const [isAddCustomOpen, setIsAddCustomOpen] = useState(false)
+  const [editingCustom, setEditingCustom] = useState<Setting | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [customForm, setCustomForm] = useState({ key: "", value: "", description: "", type: "text" })
+  const [customSubmitting, setCustomSubmitting] = useState(false)
+
+  // Known keys from setting groups
+  const knownKeys = new Set(SETTING_GROUPS.flatMap(g => g.fields.map(f => f.key)))
+
   useEffect(() => {
     if (settings.length > 0) {
-      const data: Record<string, unknown> = {}
-      settings.forEach(setting => {
-        try {
-          data[setting.key] = typeof setting.value === 'string' 
-            ? JSON.parse(setting.value) 
-            : setting.value
-        } catch {
-          data[setting.key] = setting.value
-        }
+      const vals: Record<string, string> = {}
+      const customs: Setting[] = []
+      settings.forEach(s => {
+        vals[s.key] = s.value
+        if (!knownKeys.has(s.key)) customs.push(s)
       })
-      setFormData(data)
+      setLocalValues(vals)
+      setCustomSettings(customs)
     }
   }, [settings])
 
-  const handleSave = async (key: string, value: unknown) => {
-    setSaving(true)
+  const getValue = (key: string, placeholder: string) => localValues[key] ?? ""
+
+  const setSingle = (key: string, val: string) => setLocalValues(prev => ({ ...prev, [key]: val }))
+
+  const saveField = async (key: string, value: string) => {
+    setSaving(prev => ({ ...prev, [key]: true }))
     try {
-      await updateSetting(key, JSON.stringify(value))
-      toast.success("Setting updated successfully")
-    } catch (error) {
-      toast.error("Failed to update setting")
-      console.error('Failed to update setting:', error)
+      await updateSetting(key, value)
+      setSaved(prev => ({ ...prev, [key]: true }))
+      setTimeout(() => setSaved(prev => ({ ...prev, [key]: false })), 2000)
+      toast.success("Setting saved", `"${key}" updated successfully`)
+    } catch (e) {
+      toast.error("Failed to save", `Could not update "${key}". Check your database connection.`)
     } finally {
-      setSaving(false)
+      setSaving(prev => ({ ...prev, [key]: false }))
     }
   }
 
-  const handleInputChange = (key: string, value: unknown) => {
-    setFormData(prev => ({
-      ...prev,
-      [key]: value
-    }))
+  const saveGroup = async (groupKey: string) => {
+    const group = SETTING_GROUPS.find(g => g.key === groupKey)
+    if (!group) return
+    setGroupSaving(true)
+    setAlert(null)
+    let successCount = 0
+    let errorCount = 0
+    for (const field of group.fields) {
+      const val = localValues[field.key]
+      if (val !== undefined) {
+        try {
+          await updateSetting(field.key, val)
+          successCount++
+        } catch {
+          errorCount++
+        }
+      }
+    }
+    setGroupSaving(false)
+    if (errorCount === 0) {
+      setAlert({ type: "success", title: `${group.label} settings saved`, message: `${successCount} settings updated successfully.` })
+      toast.success(`${group.label} settings saved!`)
+    } else {
+      setAlert({ type: "warning", title: "Partial save", message: `${successCount} saved, ${errorCount} failed. Check your DB connection.` })
+    }
   }
 
-  const defaultSettings = {
-    // Site Settings
-    site_title: "Luxury Photography Studio",
-    site_description: "Professional photography services for weddings, portraits, and events",
-    site_keywords: "photography, wedding, portrait, professional, luxury",
-    
-    // Contact Information
-    contact_email: "info@luxuryphoto.com",
-    contact_phone: "+1 (555) 123-4567",
-    contact_address: "123 Photography Street, Studio City, CA 90210",
-    contact_hours: "Mon-Fri: 9AM-6PM, Sat: 10AM-4PM",
-    
-    // Social Media
-    social_instagram: "https://instagram.com/luxuryphoto",
-    social_facebook: "https://facebook.com/luxuryphoto",
-    social_twitter: "https://twitter.com/luxuryphoto",
-    social_youtube: "https://youtube.com/luxuryphoto",
-    social_pinterest: "https://pinterest.com/luxuryphoto",
-    
-    // Business Settings
-    business_name: "Luxury Photography Studio",
-    business_tagline: "Capturing Life's Most Precious Moments",
-    business_about: "We are a team of passionate photographers dedicated to capturing your most precious moments with artistic excellence and professional service.",
-    
-    // Booking Settings
-    booking_enabled: true,
-    booking_advance_days: 30,
-    booking_deposit_percentage: 25,
-    
-    // Theme Settings
-    theme_primary_color: "#8B5CF6",
-    theme_secondary_color: "#F59E0B",
-    theme_accent_color: "#EF4444",
-    theme_dark_mode: false,
-    
-    // SEO Settings
-    seo_meta_title: "Luxury Photography Studio - Professional Photography Services",
-    seo_meta_description: "Professional photography services for weddings, portraits, and events. Capturing life's most precious moments with artistic excellence.",
+  // Custom settings CRUD
+  const handleAddCustom = async () => {
+    if (!customForm.key || !customForm.value) return
+    setCustomSubmitting(true)
+    try {
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: customForm.key, value: customForm.value, description: customForm.description }),
+      })
+      if (!res.ok) throw new Error("Failed")
+      await refreshSettings()
+      setIsAddCustomOpen(false)
+      setCustomForm({ key: "", value: "", description: "", type: "text" })
+      toast.success("Custom setting added", `"${customForm.key}" created successfully`)
+      setAlert({ type: "success", title: "Custom setting added", message: `Key "${customForm.key}" was created.` })
+    } catch {
+      toast.error("Failed to add setting")
+      setAlert({ type: "error", title: "Failed to add setting", message: "Check your database connection." })
+    } finally {
+      setCustomSubmitting(false)
+    }
   }
 
+  const handleEditCustom = async () => {
+    if (!editingCustom) return
+    setCustomSubmitting(true)
+    try {
+      await updateSetting(editingCustom.key, customForm.value)
+      await refreshSettings()
+      setEditingCustom(null)
+      toast.success("Setting updated")
+      setAlert({ type: "success", title: "Setting updated", message: `"${editingCustom.key}" updated.` })
+    } catch {
+      toast.error("Failed to update setting")
+    } finally {
+      setCustomSubmitting(false)
+    }
+  }
+
+  const handleDeleteCustom = async (key: string) => {
+    try {
+      const res = await fetch(`/api/settings/${key}`, { method: "DELETE" })
+      if (!res.ok) throw new Error("Failed")
+      await refreshSettings()
+      setDeleteConfirm(null)
+      toast.success("Setting deleted")
+      setAlert({ type: "success", title: "Setting deleted", message: `"${key}" was removed.` })
+    } catch {
+      toast.error("Failed to delete setting")
+    }
+  }
+
+  // ── Error / Loading ──────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+      <div className={`${cardCls} p-12 flex flex-col items-center justify-center`}>
+        <RefreshCw className="w-8 h-8 text-luxury-charcoal-300 animate-spin mb-3" />
+        <p className="text-sm text-luxury-charcoal-400">Loading settings…</p>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="p-8 text-center">
-        <p className="text-red-600">Error: {error}</p>
+      <div className={`${cardCls} p-8`}>
+        <div className="flex flex-col items-center text-center max-w-sm mx-auto">
+          <div className="w-14 h-14 rounded-2xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center mb-4">
+            <AlertCircle className="w-7 h-7 text-red-500" />
+          </div>
+          <h3 className="text-base font-bold text-luxury-charcoal-900 dark:text-white mb-2">Database Connection Error</h3>
+          <p className="text-sm text-luxury-charcoal-500 mb-4">{error}</p>
+          <div className="bg-luxury-charcoal-50 dark:bg-luxury-charcoal-700/50 rounded-xl p-4 text-left w-full mb-4">
+            <p className="text-xs font-mono text-luxury-charcoal-600 dark:text-luxury-charcoal-300">
+              Add to <strong>.env.local</strong>:<br />
+              DATABASE_URL=postgresql://user:pass@host/db
+            </p>
+          </div>
+          <button className={primaryBtn} onClick={() => window.location.reload()}>
+            <RefreshCw className="w-4 h-4" />Retry Connection
+          </button>
+        </div>
       </div>
     )
   }
 
+  const activeGroupData = SETTING_GROUPS.find(g => g.key === activeGroup)
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
-          <p className="text-muted-foreground">Manage your website settings and configuration</p>
+    <div className="space-y-4">
+      {/* Alert */}
+      {alert && (
+        <Alert type={alert.type} title={alert.title} message={alert.message} onDismiss={() => setAlert(null)} />
+      )}
+
+      <div className="flex flex-col lg:flex-row gap-4">
+        {/* Left: Tab Navigation */}
+        <div className="lg:w-52 flex-shrink-0">
+          <div className={`${cardCls} p-2`}>
+            {SETTING_GROUPS.map(group => {
+              const Icon = group.icon
+              const isActive = activeGroup === group.key
+              return (
+                <button key={group.key} onClick={() => setActiveGroup(group.key)}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left mb-0.5 last:mb-0
+                    ${isActive ? "bg-luxury-charcoal-900 dark:bg-luxury-gold-500/20 text-white dark:text-luxury-gold-300" : "text-luxury-charcoal-600 dark:text-luxury-charcoal-400 hover:bg-luxury-charcoal-50 dark:hover:bg-luxury-charcoal-700/50"}`}>
+                  <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-white dark:text-luxury-gold-400" : group.color}`} />
+                  {group.label}
+                </button>
+              )
+            })}
+            <div className="border-t border-luxury-charcoal-100 dark:border-luxury-charcoal-700/50 mt-1 pt-1">
+              <button onClick={() => setActiveGroup("custom")}
+                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left
+                  ${activeGroup === "custom" ? "bg-luxury-charcoal-900 dark:bg-luxury-gold-500/20 text-white dark:text-luxury-gold-300" : "text-luxury-charcoal-600 dark:text-luxury-charcoal-400 hover:bg-luxury-charcoal-50 dark:hover:bg-luxury-charcoal-700/50"}`}>
+                <Code className={`w-4 h-4 flex-shrink-0 ${activeGroup === "custom" ? "text-white dark:text-luxury-gold-400" : "text-purple-600"}`} />
+                Custom
+                {customSettings.length > 0 && (
+                  <span className="ml-auto text-xs bg-luxury-charcoal-100 dark:bg-luxury-charcoal-700 text-luxury-charcoal-600 dark:text-luxury-charcoal-300 px-1.5 py-0.5 rounded-full font-bold">{customSettings.length}</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Settings Panel */}
+        <div className="flex-1 min-w-0">
+          {activeGroup !== "custom" && activeGroupData && (
+            <div className={`${cardCls} p-5`}>
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-xl bg-luxury-charcoal-50 dark:bg-luxury-charcoal-700/50 flex items-center justify-center`}>
+                    <activeGroupData.icon className={`w-4 h-4 ${activeGroupData.color}`} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-luxury-charcoal-900 dark:text-white">{activeGroupData.label} Settings</h3>
+                    <p className="text-xs text-luxury-charcoal-400">{activeGroupData.fields.length} configurable fields</p>
+                  </div>
+                </div>
+                <button className={primaryBtn} onClick={() => saveGroup(activeGroup)} disabled={groupSaving}>
+                  {groupSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {groupSaving ? "Saving…" : "Save All"}
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {activeGroupData.fields.map(field => {
+                  const val = getValue(field.key, field.placeholder)
+                  const isSaving = saving[field.key]
+                  const isSaved = saved[field.key]
+
+                  if (field.type === "toggle") {
+                    return (
+                      <div key={field.key} className="flex items-center justify-between py-3 border-b border-luxury-charcoal-50 dark:border-luxury-charcoal-700/50 last:border-0">
+                        <div>
+                          <label className={labelCls}>{field.label}</label>
+                          {field.description && <p className="text-xs text-luxury-charcoal-400 mt-0.5">{field.description}</p>}
+                        </div>
+                        <button onClick={() => {
+                          const next = val === "true" ? "false" : "true"
+                          setSingle(field.key, next)
+                          saveField(field.key, next)
+                        }} className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${val === "true" ? "bg-luxury-gold-500" : "bg-luxury-charcoal-200 dark:bg-luxury-charcoal-600"}`}>
+                          <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${val === "true" ? "translate-x-5" : "translate-x-0.5"}`} />
+                        </button>
+                      </div>
+                    )
+                  }
+
+                  return (
+                    <div key={field.key} className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className={labelCls}>{field.label}</label>
+                        {isSaved && <span className="text-xs text-emerald-500 flex items-center gap-1"><CheckCircle className="w-3 h-3" />Saved</span>}
+                      </div>
+                      {field.description && <p className="text-xs text-luxury-charcoal-400">{field.description}</p>}
+                      <div className="flex gap-2">
+                        {field.type === "textarea" ? (
+                          <Textarea className="border-luxury-charcoal-200 dark:border-luxury-charcoal-700 dark:bg-luxury-charcoal-700/50 rounded-xl text-sm min-h-[80px] flex-1"
+                            placeholder={field.placeholder} value={val} onChange={e => setSingle(field.key, e.target.value)} />
+                        ) : (
+                          <Input className={`${inputCls} flex-1`} type={field.type} placeholder={field.placeholder} value={val} onChange={e => setSingle(field.key, e.target.value)} />
+                        )}
+                        <button onClick={() => saveField(field.key, val)} disabled={isSaving}
+                          className="flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-xl border border-luxury-charcoal-200 dark:border-luxury-charcoal-600 hover:bg-luxury-charcoal-50 dark:hover:bg-luxury-charcoal-700/50 transition-colors disabled:opacity-50" title="Save this field">
+                          {isSaving ? <RefreshCw className="w-4 h-4 animate-spin text-luxury-charcoal-400" /> : <Save className="w-4 h-4 text-luxury-charcoal-500" />}
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Custom Settings */}
+          {activeGroup === "custom" && (
+            <div className={`${cardCls} p-5`}>
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h3 className="text-sm font-bold text-luxury-charcoal-900 dark:text-white">Custom Settings</h3>
+                  <p className="text-xs text-luxury-charcoal-400 mt-0.5">Add your own key-value configuration pairs</p>
+                </div>
+                <button className={primaryBtn} onClick={() => { setCustomForm({ key: "", value: "", description: "", type: "text" }); setIsAddCustomOpen(true) }}>
+                  <Plus className="w-4 h-4" />Add Setting
+                </button>
+              </div>
+
+              {/* Search */}
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-luxury-charcoal-400" />
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search custom settings…"
+                  className="w-full pl-9 pr-3 h-11 rounded-xl border border-luxury-charcoal-200 dark:border-luxury-charcoal-700 bg-white dark:bg-luxury-charcoal-700/50 text-sm focus:ring-2 focus:ring-luxury-gold-400/30 focus:border-luxury-gold-400 outline-none transition-all" />
+              </div>
+
+              {customSettings.filter(s => !search || s.key.includes(search.toLowerCase()) || s.value.includes(search.toLowerCase())).length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-luxury-charcoal-400">
+                  <Settings className="w-10 h-10 mb-3 opacity-30" />
+                  <p className="font-medium text-sm">No custom settings</p>
+                  <p className="text-xs mt-1 opacity-70">Add key-value pairs for custom configuration</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-luxury-charcoal-50 dark:divide-luxury-charcoal-700/30">
+                  {customSettings
+                    .filter(s => !search || s.key.includes(search.toLowerCase()) || s.value.includes(search.toLowerCase()))
+                    .map(setting => (
+                      <div key={setting.key} className="py-3 flex items-start gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <code className="text-xs font-mono text-luxury-charcoal-700 dark:text-luxury-charcoal-200 bg-luxury-charcoal-100 dark:bg-luxury-charcoal-700 px-2 py-0.5 rounded">{setting.key}</code>
+                          </div>
+                          <p className="text-sm text-luxury-charcoal-600 dark:text-luxury-charcoal-300 mt-1 truncate">{setting.value}</p>
+                          {setting.description && <p className="text-xs text-luxury-charcoal-400 mt-0.5">{setting.description}</p>}
+                        </div>
+                        <div className="flex gap-1 flex-shrink-0">
+                          <button onClick={() => { setEditingCustom(setting); setCustomForm({ key: setting.key, value: setting.value, description: setting.description || "", type: "text" }) }}
+                            className="p-1.5 rounded-lg hover:bg-luxury-charcoal-100 dark:hover:bg-luxury-charcoal-700 text-luxury-charcoal-400 hover:text-luxury-charcoal-700 transition-colors"><Edit className="w-4 h-4" /></button>
+                          <button onClick={() => setDeleteConfirm(setting.key)}
+                            className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-luxury-charcoal-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="general" className="flex items-center gap-2">
-            <Settings className="w-4 h-4" />
-            General
-          </TabsTrigger>
-          <TabsTrigger value="contact" className="flex items-center gap-2">
-            <Phone className="w-4 h-4" />
-            Contact
-          </TabsTrigger>
-          <TabsTrigger value="social" className="flex items-center gap-2">
-            <Globe className="w-4 h-4" />
-            Social
-          </TabsTrigger>
-          <TabsTrigger value="booking" className="flex items-center gap-2">
-            <Camera className="w-4 h-4" />
-            Booking
-          </TabsTrigger>
-          <TabsTrigger value="theme" className="flex items-center gap-2">
-            <Palette className="w-4 h-4" />
-            Theme
-          </TabsTrigger>
-        </TabsList>
+      {/* Add Custom Setting Dialog */}
+      <Dialog open={isAddCustomOpen} onOpenChange={setIsAddCustomOpen}>
+        <DialogContent className="max-w-md bg-white dark:bg-luxury-charcoal-800 border-luxury-charcoal-100 dark:border-luxury-charcoal-700 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-luxury-charcoal-900 dark:text-white">Add Custom Setting</DialogTitle>
+            <DialogDescription className="text-luxury-charcoal-500">Create a new key-value configuration pair.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className={labelCls}>Key * <span className="normal-case font-normal text-luxury-charcoal-400">(lowercase, no spaces)</span></label>
+              <Input className={inputCls} placeholder="my_custom_key" value={customForm.key}
+                onChange={e => setCustomForm(prev => ({ ...prev, key: e.target.value.replace(/\s+/g, "_").toLowerCase() }))} />
+            </div>
+            <div className="space-y-1.5">
+              <label className={labelCls}>Value *</label>
+              <Textarea className="border-luxury-charcoal-200 dark:border-luxury-charcoal-700 dark:bg-luxury-charcoal-700/50 rounded-xl text-sm min-h-[80px]"
+                placeholder="Setting value…" value={customForm.value} onChange={e => setCustomForm(prev => ({ ...prev, value: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <label className={labelCls}>Description</label>
+              <Input className={inputCls} placeholder="What this setting controls…" value={customForm.description}
+                onChange={e => setCustomForm(prev => ({ ...prev, description: e.target.value }))} />
+            </div>
+            <div className="flex gap-3 pt-2 border-t border-luxury-charcoal-100 dark:border-luxury-charcoal-700">
+              <button className={primaryBtn} onClick={handleAddCustom} disabled={customSubmitting || !customForm.key || !customForm.value}>
+                {customSubmitting && <RefreshCw className="w-4 h-4 animate-spin" />}Add Setting
+              </button>
+              <button className={outlineBtn} onClick={() => setIsAddCustomOpen(false)}>Cancel</button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
-        {/* General Settings */}
-        <TabsContent value="general">
-          <Card>
-            <CardHeader>
-              <CardTitle>General Settings</CardTitle>
-              <CardDescription>Basic website information and configuration</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="site_title">Site Title</Label>
-                  <Input
-                    id="site_title"
-                    value={String(formData.site_title || defaultSettings.site_title)}
-                    onChange={(e) => handleInputChange('site_title', e.target.value)}
-                    placeholder="Your site title"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="business_name">Business Name</Label>
-                  <Input
-                    id="business_name"
-                    value={String(formData.business_name || defaultSettings.business_name)}
-                    onChange={(e) => handleInputChange('business_name', e.target.value)}
-                    placeholder="Your business name"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="site_description">Site Description</Label>
-                <Textarea
-                  id="site_description"
-                  value={String(formData.site_description || defaultSettings.site_description)}
-                  onChange={(e) => handleInputChange('site_description', e.target.value)}
-                  placeholder="Brief description of your website"
-                  rows={3}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="business_tagline">Business Tagline</Label>
-                <Input
-                  id="business_tagline"
-                  value={String(formData.business_tagline || defaultSettings.business_tagline)}
-                  onChange={(e) => handleInputChange('business_tagline', e.target.value)}
-                  placeholder="Your business tagline"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="business_about">About Business</Label>
-                <Textarea
-                  id="business_about"
-                  value={String(formData.business_about || defaultSettings.business_about)}
-                  onChange={(e) => handleInputChange('business_about', e.target.value)}
-                  placeholder="Tell visitors about your business"
-                  rows={4}
-                />
-              </div>
-              
-              <Button 
-                onClick={() => {
-                  handleSave('site_title', formData.site_title || defaultSettings.site_title)
-                  handleSave('business_name', formData.business_name || defaultSettings.business_name)
-                  handleSave('site_description', formData.site_description || defaultSettings.site_description)
-                  handleSave('business_tagline', formData.business_tagline || defaultSettings.business_tagline)
-                  handleSave('business_about', formData.business_about || defaultSettings.business_about)
-                }}
-                disabled={saving}
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {saving ? 'Saving...' : 'Save General Settings'}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
+      {/* Edit Custom Setting Dialog */}
+      <Dialog open={!!editingCustom} onOpenChange={() => setEditingCustom(null)}>
+        <DialogContent className="max-w-md bg-white dark:bg-luxury-charcoal-800 border-luxury-charcoal-100 dark:border-luxury-charcoal-700 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-luxury-charcoal-900 dark:text-white">Edit Setting</DialogTitle>
+            <DialogDescription className="text-luxury-charcoal-500 font-mono">{editingCustom?.key}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className={labelCls}>Value *</label>
+              <Textarea className="border-luxury-charcoal-200 dark:border-luxury-charcoal-700 dark:bg-luxury-charcoal-700/50 rounded-xl text-sm min-h-[80px]"
+                value={customForm.value} onChange={e => setCustomForm(prev => ({ ...prev, value: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <label className={labelCls}>Description</label>
+              <Input className={inputCls} placeholder="What this setting controls…" value={customForm.description}
+                onChange={e => setCustomForm(prev => ({ ...prev, description: e.target.value }))} />
+            </div>
+            <div className="flex gap-3 pt-2 border-t border-luxury-charcoal-100 dark:border-luxury-charcoal-700">
+              <button className={primaryBtn} onClick={handleEditCustom} disabled={customSubmitting || !customForm.value}>
+                {customSubmitting && <RefreshCw className="w-4 h-4 animate-spin" />}Save Changes
+              </button>
+              <button className={outlineBtn} onClick={() => setEditingCustom(null)}>Cancel</button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
-        {/* Contact Settings */}
-        <TabsContent value="contact">
-          <Card>
-            <CardHeader>
-              <CardTitle>Contact Information</CardTitle>
-              <CardDescription>Your business contact details</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="contact_email">Email Address</Label>
-                  <Input
-                    id="contact_email"
-                    type="email"
-                    value={String(formData.contact_email || defaultSettings.contact_email)}
-                    onChange={(e) => handleInputChange('contact_email', e.target.value)}
-                    placeholder="your@email.com"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="contact_phone">Phone Number</Label>
-                  <Input
-                    id="contact_phone"
-                    value={String(formData.contact_phone || defaultSettings.contact_phone)}
-                    onChange={(e) => handleInputChange('contact_phone', e.target.value)}
-                    placeholder="+1 (555) 123-4567"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="contact_address">Business Address</Label>
-                <Textarea
-                  id="contact_address"
-                  value={String(formData.contact_address || defaultSettings.contact_address)}
-                  onChange={(e) => handleInputChange('contact_address', e.target.value)}
-                  placeholder="Your business address"
-                  rows={2}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="contact_hours">Business Hours</Label>
-                <Input
-                  id="contact_hours"
-                  value={String(formData.contact_hours || defaultSettings.contact_hours)}
-                  onChange={(e) => handleInputChange('contact_hours', e.target.value)}
-                  placeholder="Mon-Fri: 9AM-6PM"
-                />
-              </div>
-              
-              <Button 
-                onClick={() => {
-                  handleSave('contact_email', formData.contact_email || defaultSettings.contact_email)
-                  handleSave('contact_phone', formData.contact_phone || defaultSettings.contact_phone)
-                  handleSave('contact_address', formData.contact_address || defaultSettings.contact_address)
-                  handleSave('contact_hours', formData.contact_hours || defaultSettings.contact_hours)
-                }}
-                disabled={saving}
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {saving ? 'Saving...' : 'Save Contact Settings'}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Social Media Settings */}
-        <TabsContent value="social">
-          <Card>
-            <CardHeader>
-              <CardTitle>Social Media Links</CardTitle>
-              <CardDescription>Your social media profiles</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="social_instagram">Instagram</Label>
-                  <Input
-                    id="social_instagram"
-                    value={String(formData.social_instagram || defaultSettings.social_instagram)}
-                    onChange={(e) => handleInputChange('social_instagram', e.target.value)}
-                    placeholder="https://instagram.com/yourhandle"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="social_facebook">Facebook</Label>
-                  <Input
-                    id="social_facebook"
-                    value={String(formData.social_facebook || defaultSettings.social_facebook)}
-                    onChange={(e) => handleInputChange('social_facebook', e.target.value)}
-                    placeholder="https://facebook.com/yourpage"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="social_twitter">Twitter</Label>
-                  <Input
-                    id="social_twitter"
-                    value={String(formData.social_twitter || defaultSettings.social_twitter)}
-                    onChange={(e) => handleInputChange('social_twitter', e.target.value)}
-                    placeholder="https://twitter.com/yourhandle"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="social_youtube">YouTube</Label>
-                  <Input
-                    id="social_youtube"
-                    value={String(formData.social_youtube || defaultSettings.social_youtube)}
-                    onChange={(e) => handleInputChange('social_youtube', e.target.value)}
-                    placeholder="https://youtube.com/yourchannel"
-                  />
-                </div>
-              </div>
-              
-              <Button 
-                onClick={() => {
-                  handleSave('social_instagram', formData.social_instagram || defaultSettings.social_instagram)
-                  handleSave('social_facebook', formData.social_facebook || defaultSettings.social_facebook)
-                  handleSave('social_twitter', formData.social_twitter || defaultSettings.social_twitter)
-                  handleSave('social_youtube', formData.social_youtube || defaultSettings.social_youtube)
-                }}
-                disabled={saving}
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {saving ? 'Saving...' : 'Save Social Settings'}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Booking Settings */}
-        <TabsContent value="booking">
-          <Card>
-            <CardHeader>
-              <CardTitle>Booking Configuration</CardTitle>
-              <CardDescription>Configure booking system settings</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="booking_enabled"
-                  checked={Boolean(formData.booking_enabled ?? defaultSettings.booking_enabled)}
-                  onCheckedChange={(checked) => handleInputChange('booking_enabled', checked)}
-                />
-                <Label htmlFor="booking_enabled">Enable Online Booking</Label>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="booking_advance_days">Advance Booking Days</Label>
-                  <Input
-                    id="booking_advance_days"
-                    type="number"
-                    value={String(formData.booking_advance_days || defaultSettings.booking_advance_days)}
-                    onChange={(e) => handleInputChange('booking_advance_days', parseInt(e.target.value))}
-                    placeholder="30"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="booking_deposit_percentage">Deposit Percentage</Label>
-                  <Input
-                    id="booking_deposit_percentage"
-                    type="number"
-                    value={String(formData.booking_deposit_percentage || defaultSettings.booking_deposit_percentage)}
-                    onChange={(e) => handleInputChange('booking_deposit_percentage', parseInt(e.target.value))}
-                    placeholder="25"
-                  />
-                </div>
-              </div>
-              
-              <Button 
-                onClick={() => {
-                  handleSave('booking_enabled', formData.booking_enabled ?? defaultSettings.booking_enabled)
-                  handleSave('booking_advance_days', formData.booking_advance_days || defaultSettings.booking_advance_days)
-                  handleSave('booking_deposit_percentage', formData.booking_deposit_percentage || defaultSettings.booking_deposit_percentage)
-                }}
-                disabled={saving}
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {saving ? 'Saving...' : 'Save Booking Settings'}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Theme Settings */}
-        <TabsContent value="theme">
-          <Card>
-            <CardHeader>
-              <CardTitle>Theme Configuration</CardTitle>
-              <CardDescription>Customize your website appearance</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="theme_primary_color">Primary Color</Label>
-                  <Input
-                    id="theme_primary_color"
-                    type="color"
-                    value={String(formData.theme_primary_color || defaultSettings.theme_primary_color)}
-                    onChange={(e) => handleInputChange('theme_primary_color', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="theme_secondary_color">Secondary Color</Label>
-                  <Input
-                    id="theme_secondary_color"
-                    type="color"
-                    value={String(formData.theme_secondary_color || defaultSettings.theme_secondary_color)}
-                    onChange={(e) => handleInputChange('theme_secondary_color', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="theme_accent_color">Accent Color</Label>
-                  <Input
-                    id="theme_accent_color"
-                    type="color"
-                    value={String(formData.theme_accent_color || defaultSettings.theme_accent_color)}
-                    onChange={(e) => handleInputChange('theme_accent_color', e.target.value)}
-                  />
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="theme_dark_mode"
-                  checked={Boolean(formData.theme_dark_mode ?? defaultSettings.theme_dark_mode)}
-                  onCheckedChange={(checked) => handleInputChange('theme_dark_mode', checked)}
-                />
-                <Label htmlFor="theme_dark_mode">Enable Dark Mode by Default</Label>
-              </div>
-              
-              <Button 
-                onClick={() => {
-                  handleSave('theme_primary_color', formData.theme_primary_color || defaultSettings.theme_primary_color)
-                  handleSave('theme_secondary_color', formData.theme_secondary_color || defaultSettings.theme_secondary_color)
-                  handleSave('theme_accent_color', formData.theme_accent_color || defaultSettings.theme_accent_color)
-                  handleSave('theme_dark_mode', formData.theme_dark_mode ?? defaultSettings.theme_dark_mode)
-                }}
-                disabled={saving}
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {saving ? 'Saving...' : 'Save Theme Settings'}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      {/* Delete Confirm */}
+      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <DialogContent className="max-w-sm bg-white dark:bg-luxury-charcoal-800 border-luxury-charcoal-100 dark:border-luxury-charcoal-700 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-luxury-charcoal-900 dark:text-white">Delete Setting?</DialogTitle>
+            <DialogDescription className="text-luxury-charcoal-500">
+              Setting <code className="font-mono text-luxury-charcoal-700 dark:text-luxury-charcoal-200 bg-luxury-charcoal-100 dark:bg-luxury-charcoal-700 px-1.5 py-0.5 rounded">{deleteConfirm}</code> will be permanently deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 mt-2">
+            <button className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-xl transition-colors" onClick={() => deleteConfirm && handleDeleteCustom(deleteConfirm)}>Delete</button>
+            <button className={`flex-1 ${outlineBtn} justify-center`} onClick={() => setDeleteConfirm(null)}>Cancel</button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
-
-
