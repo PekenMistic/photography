@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Upload, Trash2, Plus, Image as ImageIcon, Eye, Edit, Search, Star } from "lucide-react"
 import Image from "next/image"
 import { useDatabase, type PortfolioItem } from "@/lib/database-context"
+import { useLuxuryToast } from "@/components/ui/luxury-toast"
 
 const cardCls = "bg-white dark:bg-luxury-charcoal-800 rounded-2xl border border-luxury-charcoal-100 dark:border-luxury-charcoal-700/50 shadow-sm"
 const inputCls = "border-luxury-charcoal-200 dark:border-luxury-charcoal-700 dark:bg-luxury-charcoal-700/50 rounded-xl h-11 text-sm focus:ring-2 focus:ring-luxury-gold-400/30 focus:border-luxury-gold-400 transition-all"
@@ -79,6 +80,7 @@ function PortfolioForm({ data, onChange, onSubmit, onCancel, loading, isEdit }: 
 
 export default function PortfolioManager() {
   const { portfolioItems, addPortfolioItem, updatePortfolioItem, deletePortfolioItem } = useDatabase()
+  const toast = useLuxuryToast()
   const [search, setSearch] = useState("")
   const [filterCategory, setFilterCategory] = useState("all")
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null)
@@ -107,7 +109,8 @@ export default function PortfolioManager() {
     try {
       await addPortfolioItem({ ...formData, tags: [] })
       setIsAddOpen(false); setFormData(emptyForm)
-    } catch { } finally { setSubmitting(false) }
+      toast.success('Photo added!', `"${formData.title}" has been added to your portfolio.`)
+    } catch { toast.error('Failed to add photo', 'Please check your database connection.') } finally { setSubmitting(false) }
   }
 
   const handleEdit = async () => {
@@ -116,15 +119,16 @@ export default function PortfolioManager() {
     try {
       await updatePortfolioItem(selectedItem.id, formData)
       setIsEditOpen(false)
-    } catch { } finally { setSubmitting(false) }
+      toast.success('Photo updated!')
+    } catch { toast.error('Failed to update photo') } finally { setSubmitting(false) }
   }
 
   const handleDelete = async (id: string) => {
-    try { await deletePortfolioItem(id); setDeleteConfirm(null) } catch { }
+    try { await deletePortfolioItem(id); setDeleteConfirm(null); toast.success('Photo deleted') } catch { toast.error('Failed to delete photo') }
   }
 
   const toggleFeatured = async (item: PortfolioItem) => {
-    try { await updatePortfolioItem(item.id, { featured: !item.featured }) } catch { }
+    try { await updatePortfolioItem(item.id, { featured: !item.featured }); toast.info(item.featured ? 'Removed from featured' : 'Marked as featured') } catch { toast.error('Failed to update') }
   }
 
   return (
