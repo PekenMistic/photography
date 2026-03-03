@@ -1,280 +1,90 @@
-"use client";
+"use client"
 
-import React from 'react';
-import { motion } from 'framer-motion';
-import {
-  Upload,
-  Plus,
-  MessageSquare,
-  Eye,
-  Calendar,
-  Camera,
-  Users,
-  Settings,
-  Star
-} from 'lucide-react';
-import { EnhancedCard, CardHeader, CardTitle, CardContent } from '@/components/ui/enhanced-card';
-import { EnhancedButton } from '@/components/ui/enhanced-button';
-import { usePhotographyToast } from '@/components/ui/luxury-toast';
+import React from 'react'
+import { Upload, Plus, MessageSquare, Eye, Calendar, Camera, BookOpen, HelpCircle } from 'lucide-react'
+import { useDatabase } from '@/lib/database-context'
 
-const LuxuryQuickActions: React.FC = () => {
-  // const [isUploading, setIsUploading] = useState(false);
-  const toast = usePhotographyToast();
+const cardCls = "bg-white dark:bg-luxury-charcoal-800 rounded-2xl border border-luxury-charcoal-100 dark:border-luxury-charcoal-700/50 shadow-sm"
 
-  const quickActions = [
-    {
-      title: 'Upload Images',
-      description: 'Add new photos to portfolio',
-      icon: Upload,
-      color: 'from-luxury-teal-500 to-luxury-teal-600',
-      bgColor: 'bg-luxury-teal-50 dark:bg-luxury-teal-900/20',
-      action: () => handleUpload()
-    },
-    {
-      title: 'New Booking',
-      description: 'Create a new client booking',
-      icon: Plus,
-      color: 'from-luxury-gold-500 to-luxury-gold-600',
-      bgColor: 'bg-luxury-gold-50 dark:bg-luxury-gold-900/20',
-      action: () => handleNewBooking()
-    },
-    {
-      title: 'View Messages',
-      description: 'Check client inquiries',
-      icon: MessageSquare,
-      color: 'from-luxury-charcoal-600 to-luxury-charcoal-700',
-      bgColor: 'bg-luxury-charcoal-50 dark:bg-luxury-charcoal-900/20',
-      action: () => handleViewMessages()
-    },
-    {
-      title: 'Preview Site',
-      description: 'View live website',
-      icon: Eye,
-      color: 'from-luxury-gold-400 to-luxury-gold-500',
-      bgColor: 'bg-luxury-gold-50 dark:bg-luxury-gold-900/20',
-      action: () => handlePreviewSite()
-    }
-  ];
+interface QuickAction {
+  title: string
+  description: string
+  icon: React.FC<{ className?: string }>
+  grad: string
+  bg: string
+  href?: string
+  onClick?: () => void
+}
 
-  const recentActivities = [
-    {
-      type: 'upload',
-      title: 'New portfolio images uploaded',
-      description: '12 wedding photos added to gallery',
-      time: '2 hours ago',
-      icon: Camera,
-      color: 'text-luxury-teal-600'
-    },
-    {
-      type: 'booking',
-      title: 'New booking received',
-      description: 'Sarah & John - Wedding Photography',
-      time: '4 hours ago',
-      icon: Calendar,
-      color: 'text-luxury-gold-600'
-    },
-    {
-      type: 'message',
-      title: 'Client message received',
-      description: 'Question about portrait session pricing',
-      time: '6 hours ago',
-      icon: MessageSquare,
-      color: 'text-luxury-charcoal-600'
-    },
-    {
-      type: 'review',
-      title: 'New 5-star review',
-      description: 'Amazing work on our engagement photos!',
-      time: '1 day ago',
-      icon: Star,
-      color: 'text-luxury-gold-500'
-    }
-  ];
+export default function LuxuryQuickActions() {
+  const { bookings, messages, portfolioItems, stats } = useDatabase()
 
-  const handleUpload = () => {
-    setIsUploading(true);
-    // Simulate upload process
-    setTimeout(() => {
-      setIsUploading(false);
-      toast.uploadSuccess();
-    }, 2000);
-  };
+  const pendingBookings = bookings.filter(b => b.status === "pending").length
+  const unreadMessages = messages.filter(m => m.status === "unread").length
 
-  const handleNewBooking = () => {
-    toast.bookingSuccess();
-    // Navigate to booking form
-  };
+  const actions: QuickAction[] = [
+    { title: "View Live Site", description: "Preview your public website", icon: Eye, grad: "from-teal-400 to-teal-600", bg: "bg-teal-50 dark:bg-teal-900/20", href: "/" },
+    { title: "Go to Portfolio", description: `${portfolioItems.length} photos managed`, icon: Camera, grad: "from-blue-400 to-blue-600", bg: "bg-blue-50 dark:bg-blue-900/20", href: "/portfolio" },
+    { title: "View Blog", description: "Check published articles", icon: BookOpen, grad: "from-indigo-400 to-indigo-600", bg: "bg-indigo-50 dark:bg-indigo-900/20", href: "/blog" },
+    { title: "See All FAQs", description: "View public FAQ page", icon: HelpCircle, grad: "from-emerald-400 to-emerald-600", bg: "bg-emerald-50 dark:bg-emerald-900/20", href: "/" },
+  ]
 
-  const handleViewMessages = () => {
-    toast.messageSuccess();
-    // Navigate to messages
-  };
-
-  const handlePreviewSite = () => {
-    window.open('/', '_blank');
-    toast.shareSuccess();
-  };
+  const highlights = [
+    { label: "Pending Bookings", value: pendingBookings, color: pendingBookings > 0 ? "text-amber-600" : "text-luxury-charcoal-400", icon: <Calendar className="w-4 h-4" /> },
+    { label: "Unread Messages", value: unreadMessages, color: unreadMessages > 0 ? "text-blue-600" : "text-luxury-charcoal-400", icon: <MessageSquare className="w-4 h-4" /> },
+    { label: "Total Photos", value: portfolioItems.length, color: "text-luxury-charcoal-700 dark:text-luxury-charcoal-200", icon: <Camera className="w-4 h-4" /> },
+    { label: "Total Bookings", value: stats?.totalBookings || 0, color: "text-luxury-charcoal-700 dark:text-luxury-charcoal-200", icon: <Plus className="w-4 h-4" /> },
+  ]
 
   return (
-    <div className="space-y-8">
-      {/* Quick Actions Grid */}
-      <div>
-        <h3 className="text-lg font-display font-semibold text-luxury-charcoal-900 dark:text-white mb-6">
-          Quick Actions
-        </h3>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {quickActions.map((action, index) => {
-            const IconComponent = action.icon;
-            
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* Quick Links */}
+      <div className={`${cardCls} p-5 lg:col-span-2`}>
+        <h3 className="text-sm font-bold text-luxury-charcoal-900 dark:text-white mb-1">Quick Links</h3>
+        <p className="text-xs text-luxury-charcoal-400 mb-4">Navigate to key areas of your website</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {actions.map(action => {
+            const Icon = action.icon
             return (
-              <motion.div
-                key={action.title}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
-              >
-                <EnhancedCard 
-                  variant="elevated" 
-                  hover 
-                  animate 
-                  className="group cursor-pointer h-full"
-                  onClick={action.action}
-                >
-                  <CardContent className="p-6 text-center">
-                    <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br ${action.color} flex items-center justify-center shadow-luxury group-hover:scale-110 transition-transform duration-300`}>
-                      <IconComponent className="w-8 h-8 text-white" />
-                    </div>
-                    
-                    <h4 className="font-semibold text-luxury-charcoal-900 dark:text-white mb-2">
-                      {action.title}
-                    </h4>
-                    
-                    <p className="text-sm text-luxury-charcoal-600 dark:text-luxury-charcoal-300">
-                      {action.description}
-                    </p>
-                  </CardContent>
-                </EnhancedCard>
-              </motion.div>
-            );
+              <a key={action.title} href={action.href || "#"} target={action.href?.startsWith("/") ? "_blank" : undefined} rel="noreferrer"
+                className={`${action.bg} rounded-xl p-3 flex flex-col items-center text-center gap-2 hover:scale-105 transition-transform duration-200 cursor-pointer group`}>
+                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${action.grad} flex items-center justify-center shadow-sm`}>
+                  <Icon className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-luxury-charcoal-800 dark:text-luxury-charcoal-100 leading-tight">{action.title}</p>
+                  <p className="text-[10px] text-luxury-charcoal-400 mt-0.5 leading-tight">{action.description}</p>
+                </div>
+              </a>
+            )
           })}
         </div>
       </div>
 
-      {/* Recent Activity */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.4 }}
-      >
-        <EnhancedCard variant="elevated" animate>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-luxury-charcoal-600" />
-              Recent Activity
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentActivities.map((activity, index) => {
-                const IconComponent = activity.icon;
-                
-                return (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, delay: 0.5 + index * 0.1 }}
-                    className="flex items-start gap-4 p-4 bg-luxury-charcoal-50 dark:bg-luxury-charcoal-800/50 rounded-2xl border border-luxury-charcoal-200/30 dark:border-luxury-charcoal-700/30 hover:shadow-luxury transition-shadow duration-300"
-                  >
-                    <div className="w-10 h-10 bg-white dark:bg-luxury-charcoal-700 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
-                      <IconComponent className={`w-5 h-5 ${activity.color}`} />
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <h5 className="font-semibold text-luxury-charcoal-900 dark:text-white text-sm">
-                        {activity.title}
-                      </h5>
-                      <p className="text-sm text-luxury-charcoal-600 dark:text-luxury-charcoal-300 mt-1">
-                        {activity.description}
-                      </p>
-                      <p className="text-xs text-luxury-charcoal-500 dark:text-luxury-charcoal-400 mt-2">
-                        {activity.time}
-                      </p>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <EnhancedButton
-                        variant="ghost"
-                        size="sm"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </EnhancedButton>
-                    </div>
-                  </motion.div>
-                );
-              })}
+      {/* Highlights */}
+      <div className={`${cardCls} p-5`}>
+        <h3 className="text-sm font-bold text-luxury-charcoal-900 dark:text-white mb-1">Attention Needed</h3>
+        <p className="text-xs text-luxury-charcoal-400 mb-4">Items requiring your review</p>
+        <div className="space-y-3">
+          {highlights.map(({ label, value, color, icon }) => (
+            <div key={label} className="flex items-center justify-between py-2 border-b border-luxury-charcoal-50 dark:border-luxury-charcoal-700/50 last:border-0">
+              <div className="flex items-center gap-2 text-luxury-charcoal-500 dark:text-luxury-charcoal-400">
+                {icon}
+                <span className="text-xs font-medium">{label}</span>
+              </div>
+              <span className={`text-sm font-bold ${color}`}>{value}</span>
             </div>
-            
-            <div className="mt-6 text-center">
-              <EnhancedButton variant="outline" size="sm">
-                View All Activity
-              </EnhancedButton>
+          ))}
+        </div>
+        {(pendingBookings > 0 || unreadMessages > 0) && (
+          <div className="mt-3 pt-3 border-t border-luxury-charcoal-50 dark:border-luxury-charcoal-700/50">
+            <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-3 py-2">
+              <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse flex-shrink-0" />
+              <span>You have items needing attention</span>
             </div>
-          </CardContent>
-        </EnhancedCard>
-      </motion.div>
-
-      {/* Performance Summary */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.6 }}
-      >
-        <EnhancedCard variant="elevated" animate>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="w-5 h-5 text-luxury-gold-600" />
-              Today&apos;s Summary
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {[
-                { label: 'New Messages', value: '3', icon: MessageSquare, color: 'text-luxury-teal-600' },
-                { label: 'Pending Bookings', value: '2', icon: Calendar, color: 'text-luxury-gold-600' },
-                { label: 'Photos Uploaded', value: '12', icon: Camera, color: 'text-luxury-charcoal-600' },
-                { label: 'Reviews Received', value: '1', icon: Star, color: 'text-luxury-gold-500' }
-              ].map((item, index) => {
-                const IconComponent = item.icon;
-                
-                return (
-                  <motion.div
-                    key={item.label}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.3, delay: 0.7 + index * 0.1 }}
-                    className="text-center"
-                  >
-                    <div className="w-12 h-12 mx-auto mb-3 bg-luxury-charcoal-50 dark:bg-luxury-charcoal-800 rounded-2xl flex items-center justify-center">
-                      <IconComponent className={`w-6 h-6 ${item.color}`} />
-                    </div>
-                    <div className="text-2xl font-bold text-luxury-charcoal-900 dark:text-white">
-                      {item.value}
-                    </div>
-                    <div className="text-sm text-luxury-charcoal-600 dark:text-luxury-charcoal-300">
-                      {item.label}
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </EnhancedCard>
-      </motion.div>
+          </div>
+        )}
+      </div>
     </div>
-  );
-};
-
-export default LuxuryQuickActions;
+  )
+}
