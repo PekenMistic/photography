@@ -97,7 +97,7 @@ export function generateMetadata({
       },
     },
     verification: {
-      google: "uXt5flb09gzMYjciDairuMSOyIUzuD3a1xrPV8RZsEI",
+      google: "LgY7cWTmvlye8z_klg3U0FFrEpuVpDOVEOxkLFRdky4",
     },
   }
 }
