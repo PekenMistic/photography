@@ -1,385 +1,269 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Mail, Phone, Reply, Archive, Trash2, Clock, Star } from "lucide-react"
+import { Mail, Phone, Reply, Trash2, Search, Eye, Clock, CheckCircle, AlertCircle, ChevronUp } from "lucide-react"
+import { useDatabase, type Message } from "@/lib/database-context"
 
-interface Message {
-  id: string
-  name: string
-  email: string
-  phone?: string
-  subject: string
-  message: string
-  status: "unread" | "read" | "replied" | "archived"
-  priority: "low" | "medium" | "high"
-  createdAt: string
-  repliedAt?: string
+const cardCls = "bg-white dark:bg-luxury-charcoal-800 rounded-2xl border border-luxury-charcoal-100 dark:border-luxury-charcoal-700/50 shadow-sm"
+const outlineBtn = "inline-flex items-center gap-2 px-3 py-2 border border-luxury-charcoal-200 dark:border-luxury-charcoal-600 text-luxury-charcoal-700 dark:text-luxury-charcoal-300 text-sm font-medium rounded-xl hover:bg-luxury-charcoal-50 dark:hover:bg-luxury-charcoal-700/50 transition-all duration-200"
+const dangerBtn = "inline-flex items-center gap-2 px-3 py-2 text-red-600 dark:text-red-400 text-sm font-medium rounded-xl border border-red-200 dark:border-red-800/50 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200"
+const primaryBtn = "inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-luxury-gold-500 to-luxury-gold-600 hover:from-luxury-gold-600 hover:to-luxury-gold-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-all duration-200 disabled:opacity-50"
+
+type Status = Message["status"]
+type Priority = Message["priority"]
+
+function StatusBadge({ status }: { status: Status }) {
+  const map: Record<Status, { cls: string; label: string }> = {
+    unread: { cls: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400", label: "Unread" },
+    read: { cls: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400", label: "Read" },
+    replied: { cls: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400", label: "Replied" },
+  }
+  const s = map[status]
+  return <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${s.cls}`}>{s.label}</span>
+}
+
+function PriorityBadge({ priority }: { priority: Priority }) {
+  const map: Record<Priority, { cls: string }> = {
+    low: { cls: "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400" },
+    normal: { cls: "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400" },
+    high: { cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
+    urgent: { cls: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
+  }
+  return <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold capitalize ${map[priority].cls}`}>{priority}</span>
 }
 
 export default function MessageManager() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      name: "Sarah Johnson",
-      email: "sarah.johnson@email.com",
-      phone: "+1 (555) 123-4567",
-      subject: "Wedding Photography Inquiry",
-      message: "Hi! I'm interested in booking your services for my wedding on June 15th, 2024. Could you please send me your packages and pricing information?",
-      status: "unread",
-      priority: "high",
-      createdAt: "2024-01-20T10:30:00Z"
-    },
-    {
-      id: "2",
-      name: "Michael Chen",
-      email: "m.chen@techcorp.com",
-      phone: "+1 (555) 987-6543",
-      subject: "Corporate Event Photography",
-      message: "We need a photographer for our annual company retreat. The event is scheduled for March 10-12, 2024. Please let me know your availability and rates.",
-      status: "read",
-      priority: "medium",
-      createdAt: "2024-01-19T14:15:00Z"
-    },
-    {
-      id: "3",
-      name: "Emily Rodriguez",
-      email: "emily.r@email.com",
-      subject: "Family Portrait Session",
-      message: "I would like to schedule a family portrait session for 6 people including grandparents. What are your available dates in February?",
-      status: "replied",
-      priority: "low",
-      createdAt: "2024-01-18T09:45:00Z",
-      repliedAt: "2024-01-18T16:20:00Z"
-    },
-    {
-      id: "4",
-      name: "David Wilson",
-      email: "david.wilson@email.com",
-      phone: "+1 (555) 456-7890",
-      subject: "Portfolio Collaboration",
-      message: "I'm a makeup artist and would love to collaborate on some creative portrait sessions. Are you interested in doing some test shoots?",
-      status: "archived",
-      priority: "medium",
-      createdAt: "2024-01-17T11:20:00Z"
-    }
-  ])
-
+  const { messages, updateMessage, deleteMessage } = useDatabase()
+  const [search, setSearch] = useState("")
+  const [filterStatus, setFilterStatus] = useState("all")
+  const [filterPriority, setFilterPriority] = useState("all")
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const [replyText, setReplyText] = useState("")
-  const [filterStatus, setFilterStatus] = useState<string>("all")
-
-  const updateMessageStatus = (id: string, newStatus: Message["status"]) => {
-    setMessages(messages.map(msg =>
-      msg.id === id ? { ...msg, status: newStatus } : msg
-    ))
-  }
-
-  const deleteMessage = (id: string) => {
-    if (confirm("Are you sure you want to delete this message?")) {
-      setMessages(messages.filter(msg => msg.id !== id))
-    }
-  }
-
-  const sendReply = () => {
-    if (!selectedMessage || !replyText.trim()) return
-    
-    updateMessageStatus(selectedMessage.id, "replied")
-    setReplyText("")
-    setSelectedMessage(null)
-    // In a real app, this would send the actual email
-    alert("Reply sent successfully!")
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "unread":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-      case "read":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-      case "replied":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-      case "archived":
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
-    }
-  }
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return "text-red-500"
-      case "medium":
-        return "text-yellow-500"
-      case "low":
-        return "text-green-500"
-      default:
-        return "text-gray-500"
-    }
-  }
-
-  const filteredMessages = filterStatus === "all" 
-    ? messages 
-    : messages.filter(msg => msg.status === filterStatus)
 
   const stats = {
     total: messages.length,
     unread: messages.filter(m => m.status === "unread").length,
-    read: messages.filter(m => m.status === "read").length,
     replied: messages.filter(m => m.status === "replied").length,
-    archived: messages.filter(m => m.status === "archived").length
+    urgent: messages.filter(m => m.priority === "urgent" || m.priority === "high").length,
+  }
+
+  const filtered = messages.filter(m => {
+    const matchSearch = !search || m.name.toLowerCase().includes(search.toLowerCase()) || m.email.toLowerCase().includes(search.toLowerCase()) || (m.subject || "").toLowerCase().includes(search.toLowerCase()) || m.message.toLowerCase().includes(search.toLowerCase())
+    const matchStatus = filterStatus === "all" || m.status === filterStatus
+    const matchPriority = filterPriority === "all" || m.priority === filterPriority
+    return matchSearch && matchStatus && matchPriority
+  })
+
+  const openDetail = async (msg: Message) => {
+    setSelectedMessage(msg)
+    setIsDetailOpen(true)
+    if (msg.status === "unread") {
+      try { await updateMessage(msg.id, { status: "read" }) } catch { }
+    }
+  }
+
+  const markReplied = async () => {
+    if (!selectedMessage) return
+    try {
+      await updateMessage(selectedMessage.id, { status: "replied" })
+      setSelectedMessage(prev => prev ? { ...prev, status: "replied" } : null)
+      setReplyText("")
+    } catch { }
+  }
+
+  const handleDelete = async (id: string) => {
+    try { await deleteMessage(id); setDeleteConfirm(null); setIsDetailOpen(false) } catch { }
+  }
+
+  const setPriority = async (id: string, priority: Priority) => {
+    try { await updateMessage(id, { priority }); setSelectedMessage(prev => prev ? { ...prev, priority } : null) } catch { }
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Message Management</h2>
-          <p className="text-gray-600 dark:text-gray-400">Manage client inquiries and communications</p>
-        </div>
-        <div className="flex gap-2">
-          <select 
-            value={filterStatus} 
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-2 border rounded-lg"
-          >
-            <option value="all">All Messages</option>
-            <option value="unread">Unread</option>
-            <option value="read">Read</option>
-            <option value="replied">Replied</option>
-            <option value="archived">Archived</option>
-          </select>
-        </div>
-      </div>
-
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Total</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
-              </div>
-              <Mail className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Unread</p>
-                <p className="text-2xl font-bold text-red-600">{stats.unread}</p>
-              </div>
-              <Mail className="h-8 w-8 text-red-500" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Read</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.read}</p>
-              </div>
-              <Mail className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Replied</p>
-                <p className="text-2xl font-bold text-green-600">{stats.replied}</p>
-              </div>
-              <Reply className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Archived</p>
-                <p className="text-2xl font-bold text-gray-600">{stats.archived}</p>
-              </div>
-              <Archive className="h-8 w-8 text-gray-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Messages List */}
-      <div className="space-y-4">
-        {filteredMessages.map((message) => (
-          <Card key={message.id} className={`hover:shadow-lg transition-shadow ${message.status === 'unread' ? 'border-l-4 border-l-red-500' : ''}`}>
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-lg font-semibold">{message.name}</h3>
-                    <Badge className={getStatusColor(message.status)}>
-                      {message.status.charAt(0).toUpperCase() + message.status.slice(1)}
-                    </Badge>
-                    <Star className={`w-4 h-4 ${getPriorityColor(message.priority)}`} />
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-gray-500" />
-                      <span>{message.email}</span>
-                    </div>
-                    {message.phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-gray-500" />
-                        <span>{message.phone}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-gray-500" />
-                      <span>{new Date(message.createdAt).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="font-medium mb-2">{message.subject}</h4>
-                    <p className="text-gray-600 dark:text-gray-300 line-clamp-2">{message.message}</p>
-                  </div>
-
-                  {message.repliedAt && (
-                    <div className="text-sm text-green-600 dark:text-green-400">
-                      Replied on {new Date(message.repliedAt).toLocaleDateString()}
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-2 ml-4">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setSelectedMessage(message)}
-                  >
-                    View
-                  </Button>
-                  
-                  {message.status === "unread" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => updateMessageStatus(message.id, "read")}
-                    >
-                      Mark Read
-                    </Button>
-                  )}
-                  
-                  {(message.status === "read" || message.status === "unread") && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setSelectedMessage(message)}
-                    >
-                      Reply
-                    </Button>
-                  )}
-                  
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => updateMessageStatus(message.id, "archived")}
-                  >
-                    Archive
-                  </Button>
-                  
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => deleteMessage(message.id)}
-                    className="text-red-600"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { label: "Total Messages", value: stats.total, color: "text-luxury-charcoal-900 dark:text-white" },
+          { label: "Unread", value: stats.unread, color: "text-blue-600" },
+          { label: "Replied", value: stats.replied, color: "text-emerald-600" },
+          { label: "High Priority", value: stats.urgent, color: "text-amber-600" },
+        ].map(({ label, value, color }) => (
+          <div key={label} className={`${cardCls} p-4`}>
+            <p className="text-xs font-semibold text-luxury-charcoal-500 dark:text-luxury-charcoal-400 uppercase tracking-wider mb-1">{label}</p>
+            <p className={`text-2xl font-bold ${color}`}>{value}</p>
+          </div>
         ))}
       </div>
 
-      {/* Message Details/Reply Dialog */}
-      <Dialog open={!!selectedMessage} onOpenChange={() => setSelectedMessage(null)}>
-        <DialogContent className="max-w-2xl">
+      {/* Toolbar */}
+      <div className={`${cardCls} p-4`}>
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-luxury-charcoal-400" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search messages…"
+              className="w-full pl-9 pr-3 h-11 rounded-xl border border-luxury-charcoal-200 dark:border-luxury-charcoal-700 bg-white dark:bg-luxury-charcoal-700/50 text-sm focus:ring-2 focus:ring-luxury-gold-400/30 focus:border-luxury-gold-400 outline-none transition-all" />
+          </div>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-36 h-11 rounded-xl border-luxury-charcoal-200 dark:border-luxury-charcoal-700 bg-white dark:bg-luxury-charcoal-700/50">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="unread">Unread</SelectItem>
+              <SelectItem value="read">Read</SelectItem>
+              <SelectItem value="replied">Replied</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterPriority} onValueChange={setFilterPriority}>
+            <SelectTrigger className="w-36 h-11 rounded-xl border-luxury-charcoal-200 dark:border-luxury-charcoal-700 bg-white dark:bg-luxury-charcoal-700/50">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Priority</SelectItem>
+              <SelectItem value="urgent">Urgent</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+              <SelectItem value="normal">Normal</SelectItem>
+              <SelectItem value="low">Low</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Message List */}
+      <div className={`${cardCls} overflow-hidden`}>
+        {filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-luxury-charcoal-400">
+            <Mail className="w-12 h-12 mb-3 opacity-40" />
+            <p className="font-medium">No messages found</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-luxury-charcoal-50 dark:divide-luxury-charcoal-700/30">
+            {filtered.map(msg => (
+              <div key={msg.id} className={`p-4 hover:bg-luxury-charcoal-50/50 dark:hover:bg-luxury-charcoal-700/20 transition-colors cursor-pointer ${msg.status === "unread" ? "border-l-2 border-blue-500" : ""}`}
+                onClick={() => openDetail(msg)}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-luxury-charcoal-100 to-luxury-charcoal-200 dark:from-luxury-charcoal-700 dark:to-luxury-charcoal-600 flex items-center justify-center flex-shrink-0">
+                      <span className="text-sm font-bold text-luxury-charcoal-600 dark:text-luxury-charcoal-200">{msg.name[0]?.toUpperCase()}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className={`font-semibold text-sm ${msg.status === "unread" ? "text-luxury-charcoal-900 dark:text-white" : "text-luxury-charcoal-700 dark:text-luxury-charcoal-300"}`}>{msg.name}</p>
+                        <StatusBadge status={msg.status} />
+                        <PriorityBadge priority={msg.priority} />
+                      </div>
+                      <p className="text-xs text-luxury-charcoal-400 mt-0.5">{msg.email}</p>
+                      {msg.subject && <p className="text-sm font-medium text-luxury-charcoal-700 dark:text-luxury-charcoal-200 mt-1 truncate">{msg.subject}</p>}
+                      <p className="text-xs text-luxury-charcoal-500 dark:text-luxury-charcoal-400 mt-1 line-clamp-2">{msg.message}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                    <span className="text-xs text-luxury-charcoal-400 whitespace-nowrap">{new Date(msg.createdAt).toLocaleDateString()}</span>
+                    <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+                      <button onClick={() => { setSelectedMessage(msg); setIsDetailOpen(true) }} className="p-1.5 rounded-lg hover:bg-luxury-charcoal-100 dark:hover:bg-luxury-charcoal-700 text-luxury-charcoal-400 hover:text-luxury-charcoal-700 transition-colors"><Eye className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => setDeleteConfirm(msg.id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-luxury-charcoal-400 hover:text-red-500 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Detail Dialog */}
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <DialogContent className="max-w-lg bg-white dark:bg-luxury-charcoal-800 border-luxury-charcoal-100 dark:border-luxury-charcoal-700 rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Message Details</DialogTitle>
-            <DialogDescription>View and reply to client message</DialogDescription>
+            <DialogTitle className="text-xl font-bold text-luxury-charcoal-900 dark:text-white">Message Detail</DialogTitle>
           </DialogHeader>
           {selectedMessage && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>From</Label>
-                  <p className="font-medium">{selectedMessage.name}</p>
-                </div>
-                <div>
-                  <Label>Email</Label>
-                  <p className="font-medium">{selectedMessage.email}</p>
-                </div>
-                {selectedMessage.phone && (
+            <div className="space-y-4 max-h-[75vh] overflow-y-auto">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <StatusBadge status={selectedMessage.status} />
+                <PriorityBadge priority={selectedMessage.priority} />
+              </div>
+              <div className={`${cardCls} p-4 space-y-3`}>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-luxury-gold-100 to-luxury-gold-200 dark:from-luxury-gold-900/30 dark:to-luxury-gold-800/30 flex items-center justify-center">
+                    <span className="text-lg font-bold text-luxury-gold-600">{selectedMessage.name[0]?.toUpperCase()}</span>
+                  </div>
                   <div>
-                    <Label>Phone</Label>
-                    <p className="font-medium">{selectedMessage.phone}</p>
+                    <p className="font-semibold text-luxury-charcoal-900 dark:text-white">{selectedMessage.name}</p>
+                    <p className="text-sm text-luxury-charcoal-400">{selectedMessage.email}</p>
+                    {selectedMessage.phone && <p className="text-sm text-luxury-charcoal-400">{selectedMessage.phone}</p>}
+                  </div>
+                </div>
+                {selectedMessage.subject && (
+                  <div className="pt-2 border-t border-luxury-charcoal-50 dark:border-luxury-charcoal-700/50">
+                    <p className="text-xs font-semibold text-luxury-charcoal-500 uppercase tracking-wider">Subject</p>
+                    <p className="text-sm font-semibold text-luxury-charcoal-800 dark:text-luxury-charcoal-100 mt-0.5">{selectedMessage.subject}</p>
                   </div>
                 )}
-                <div>
-                  <Label>Date</Label>
-                  <p className="font-medium">{new Date(selectedMessage.createdAt).toLocaleString()}</p>
+                <div className="pt-2 border-t border-luxury-charcoal-50 dark:border-luxury-charcoal-700/50">
+                  <p className="text-xs font-semibold text-luxury-charcoal-500 uppercase tracking-wider mb-1">Message</p>
+                  <p className="text-sm text-luxury-charcoal-700 dark:text-luxury-charcoal-300 leading-relaxed">{selectedMessage.message}</p>
+                </div>
+                <div className="pt-2 border-t border-luxury-charcoal-50 dark:border-luxury-charcoal-700/50">
+                  <p className="text-xs text-luxury-charcoal-400">{new Date(selectedMessage.createdAt).toLocaleString()}</p>
                 </div>
               </div>
-              
+              {/* Priority Setter */}
               <div>
-                <Label>Subject</Label>
-                <p className="font-medium">{selectedMessage.subject}</p>
-              </div>
-              
-              <div>
-                <Label>Message</Label>
-                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                  <p className="whitespace-pre-wrap">{selectedMessage.message}</p>
+                <p className="text-xs font-semibold text-luxury-charcoal-500 uppercase tracking-wider mb-2">Set Priority</p>
+                <div className="flex gap-2 flex-wrap">
+                  {(["low", "normal", "high", "urgent"] as Priority[]).map(p => (
+                    <button key={p} onClick={() => setPriority(selectedMessage.id, p)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize border transition-all ${selectedMessage.priority === p ? "bg-luxury-gold-500 text-white border-luxury-gold-500" : "border-luxury-charcoal-200 dark:border-luxury-charcoal-600 text-luxury-charcoal-600 dark:text-luxury-charcoal-400 hover:bg-luxury-charcoal-50 dark:hover:bg-luxury-charcoal-700/50"}`}>
+                      {p}
+                    </button>
+                  ))}
                 </div>
               </div>
-
-              {(selectedMessage.status === "read" || selectedMessage.status === "unread") && (
-                <div>
-                  <Label htmlFor="reply">Reply</Label>
-                  <Textarea
-                    id="reply"
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    placeholder="Type your reply here..."
-                    rows={4}
-                  />
-                  <div className="flex gap-2 mt-2">
-                    <Button onClick={sendReply} disabled={!replyText.trim()}>
-                      Send Reply
-                    </Button>
-                    <Button variant="outline" onClick={() => setReplyText("")}>
-                      Clear
-                    </Button>
-                  </div>
+              {/* Quick Reply */}
+              {selectedMessage.status !== "replied" && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-luxury-charcoal-500 uppercase tracking-wider">Quick Reply</p>
+                  <Textarea className="border-luxury-charcoal-200 dark:border-luxury-charcoal-700 dark:bg-luxury-charcoal-700/50 rounded-xl text-sm min-h-[80px]"
+                    placeholder={`Reply to ${selectedMessage.email}…`} value={replyText} onChange={e => setReplyText(e.target.value)} />
+                  <button className={primaryBtn} onClick={markReplied} disabled={!replyText.trim()}>
+                    <Reply className="w-4 h-4" />Mark as Replied
+                  </button>
                 </div>
               )}
+              <div className="flex gap-3 pt-2 border-t border-luxury-charcoal-100 dark:border-luxury-charcoal-700">
+                <a href={`mailto:${selectedMessage.email}?subject=Re: ${selectedMessage.subject || "Your message"}`} className={outlineBtn}>
+                  <Mail className="w-4 h-4" />Email Client
+                </a>
+                <button className={dangerBtn} onClick={() => { setIsDetailOpen(false); setDeleteConfirm(selectedMessage.id) }}>
+                  <Trash2 className="w-4 h-4" />Delete
+                </button>
+                <button className={`${outlineBtn} ml-auto`} onClick={() => setIsDetailOpen(false)}>Close</button>
+              </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm */}
+      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <DialogContent className="max-w-sm bg-white dark:bg-luxury-charcoal-800 border-luxury-charcoal-100 dark:border-luxury-charcoal-700 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-luxury-charcoal-900 dark:text-white">Delete Message?</DialogTitle>
+            <DialogDescription className="text-luxury-charcoal-500">This message will be permanently deleted.</DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 mt-2">
+            <button className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-xl transition-colors" onClick={() => deleteConfirm && handleDelete(deleteConfirm)}>Delete</button>
+            <button className={`flex-1 ${outlineBtn} justify-center`} onClick={() => setDeleteConfirm(null)}>Cancel</button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
   )
 }
-
