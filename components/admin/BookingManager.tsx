@@ -11,6 +11,7 @@ import {
   Search, Eye
 } from "lucide-react"
 import { useDatabase, type Booking } from "@/lib/database-context"
+import { useLuxuryToast } from "@/components/ui/luxury-toast"
 
 const cardCls = "bg-white dark:bg-luxury-charcoal-800 rounded-2xl border border-luxury-charcoal-100 dark:border-luxury-charcoal-700/50 shadow-sm"
 const inputCls = "border-luxury-charcoal-200 dark:border-luxury-charcoal-700 dark:bg-luxury-charcoal-700/50 rounded-xl h-11 text-sm focus:ring-2 focus:ring-luxury-gold-400/30 focus:border-luxury-gold-400 transition-all"
@@ -120,6 +121,7 @@ function BookingForm({ data, onChange, onSubmit, onCancel, loading, isEdit }: {
 
 export default function BookingManager() {
   const { bookings, addBooking, updateBooking, deleteBooking } = useDatabase()
+  const toast = useLuxuryToast()
   const [search, setSearch] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
@@ -155,7 +157,8 @@ export default function BookingManager() {
     try {
       await addBooking({ ...formData, price: formData.price ? Number(formData.price) : undefined })
       setIsAddOpen(false); setFormData(emptyForm)
-    } catch { } finally { setSubmitting(false) }
+      toast.success('Booking created!', `${formData.clientName} has been booked successfully.`)
+    } catch { toast.error('Failed to create booking', 'Please check your database connection.') } finally { setSubmitting(false) }
   }
 
   const handleEdit = async () => {
@@ -164,11 +167,12 @@ export default function BookingManager() {
     try {
       await updateBooking(selectedBooking.id, { ...formData, price: formData.price ? Number(formData.price) : undefined })
       setIsEditOpen(false)
-    } catch { } finally { setSubmitting(false) }
+      toast.success('Booking updated!')
+    } catch { toast.error('Failed to update booking') } finally { setSubmitting(false) }
   }
 
   const handleDelete = async (id: string) => {
-    try { await deleteBooking(id); setDeleteConfirm(null); setIsDetailOpen(false) } catch { }
+    try { await deleteBooking(id); setDeleteConfirm(null); setIsDetailOpen(false); toast.success('Booking deleted') } catch { toast.error('Failed to delete booking') }
   }
 
   const handleStatusChange = async (id: string, status: Booking["status"]) => {
