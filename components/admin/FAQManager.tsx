@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Edit, Trash2, Plus, HelpCircle, Search, ChevronDown, ChevronUp } from "lucide-react"
 import { useDatabase, type FAQ } from "@/lib/database-context"
+import { useLuxuryToast } from "@/components/ui/luxury-toast"
 
 const cardCls = "bg-white dark:bg-luxury-charcoal-800 rounded-2xl border border-luxury-charcoal-100 dark:border-luxury-charcoal-700/50 shadow-sm"
 const inputCls = "border-luxury-charcoal-200 dark:border-luxury-charcoal-700 dark:bg-luxury-charcoal-700/50 rounded-xl h-11 text-sm focus:ring-2 focus:ring-luxury-gold-400/30 focus:border-luxury-gold-400 transition-all"
@@ -68,6 +69,7 @@ function FAQForm({ data, onChange, onSubmit, onCancel, loading, isEdit }: {
 
 export default function FAQManager() {
   const { faqs, addFAQ, updateFAQ, deleteFAQ } = useDatabase()
+  const toast = useLuxuryToast()
   const [search, setSearch] = useState("")
   const [filterCategory, setFilterCategory] = useState("all")
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -96,21 +98,21 @@ export default function FAQManager() {
 
   const handleAdd = async () => {
     setSubmitting(true)
-    try { await addFAQ(formData); setIsAddOpen(false); setFormData(emptyForm) } catch { } finally { setSubmitting(false) }
+    try { await addFAQ(formData); setIsAddOpen(false); setFormData(emptyForm); toast.success('FAQ added!', 'New FAQ is now visible on your website.') } catch { toast.error('Failed to add FAQ') } finally { setSubmitting(false) }
   }
 
   const handleEdit = async () => {
     if (!selectedFaq) return
     setSubmitting(true)
-    try { await updateFAQ(selectedFaq.id, formData); setIsEditOpen(false) } catch { } finally { setSubmitting(false) }
+    try { await updateFAQ(selectedFaq.id, formData); setIsEditOpen(false); toast.success('FAQ updated!') } catch { toast.error('Failed to update FAQ') } finally { setSubmitting(false) }
   }
 
   const handleDelete = async (id: string) => {
-    try { await deleteFAQ(id); setDeleteConfirm(null) } catch { }
+    try { await deleteFAQ(id); setDeleteConfirm(null); toast.success('FAQ deleted') } catch { toast.error('Failed to delete FAQ') }
   }
 
   const toggleActive = async (faq: FAQ) => {
-    try { await updateFAQ(faq.id, { active: !faq.active }) } catch { }
+    try { await updateFAQ(faq.id, { active: !faq.active }); toast.info(faq.active ? 'FAQ deactivated' : 'FAQ activated!') } catch { toast.error('Failed to update FAQ') }
   }
 
   return (
