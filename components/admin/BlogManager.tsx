@@ -1,482 +1,285 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Edit, Trash2, Plus, Eye, Calendar, User, Tag, BookOpen, TrendingUp } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Edit, Trash2, Plus, Search, Eye, BookOpen, Heart, Clock } from "lucide-react"
 import Image from "next/image"
-import { useDatabase } from "@/lib/database-context"
+import { useDatabase, type BlogPost } from "@/lib/database-context"
+
+const cardCls = "bg-white dark:bg-luxury-charcoal-800 rounded-2xl border border-luxury-charcoal-100 dark:border-luxury-charcoal-700/50 shadow-sm"
+const inputCls = "border-luxury-charcoal-200 dark:border-luxury-charcoal-700 dark:bg-luxury-charcoal-700/50 rounded-xl h-11 text-sm focus:ring-2 focus:ring-luxury-gold-400/30 focus:border-luxury-gold-400 transition-all"
+const labelCls = "text-xs font-semibold text-luxury-charcoal-600 dark:text-luxury-charcoal-400 uppercase tracking-wider"
+const primaryBtn = "inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-luxury-gold-500 to-luxury-gold-600 hover:from-luxury-gold-600 hover:to-luxury-gold-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-all duration-200 disabled:opacity-50"
+const outlineBtn = "inline-flex items-center gap-2 px-3 py-2 border border-luxury-charcoal-200 dark:border-luxury-charcoal-600 text-luxury-charcoal-700 dark:text-luxury-charcoal-300 text-sm font-medium rounded-xl hover:bg-luxury-charcoal-50 dark:hover:bg-luxury-charcoal-700/50 transition-all duration-200"
+const dangerBtn = "inline-flex items-center gap-2 px-3 py-2 text-red-600 dark:text-red-400 text-sm font-medium rounded-xl border border-red-200 dark:border-red-800/50 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200"
+
+const CATEGORIES = ["Wedding Tips", "Photography Tips", "Behind the Scenes", "Portfolio", "Client Stories", "Business", "Technology"]
+
+interface FormData {
+  title: string; excerpt: string; content: string; author: string; date: string; readTime: string
+  category: string; tags: string; image: string; featured: boolean; published: boolean
+}
+const emptyForm: FormData = {
+  title: "", excerpt: "", content: "", author: "Admin", date: new Date().toISOString().split("T")[0],
+  readTime: "5 min read", category: "", tags: "", image: "", featured: false, published: false
+}
+
+function BlogForm({ data, onChange, onSubmit, onCancel, loading, isEdit }: {
+  data: FormData; onChange: (d: FormData) => void; onSubmit: () => void
+  onCancel: () => void; loading: boolean; isEdit: boolean
+}) {
+  const set = (k: keyof FormData, v: string | boolean) => onChange({ ...data, [k]: v })
+  return (
+    <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+      <div className="space-y-1.5">
+        <label className={labelCls}>Title *</label>
+        <Input className={inputCls} placeholder="Blog post title" value={data.title} onChange={e => set("title", e.target.value)} />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <label className={labelCls}>Category</label>
+          <Select value={data.category} onValueChange={v => set("category", v)}>
+            <SelectTrigger className={inputCls}><SelectValue placeholder="Select category" /></SelectTrigger>
+            <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <label className={labelCls}>Author</label>
+          <Input className={inputCls} value={data.author} onChange={e => set("author", e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <label className={labelCls}>Date</label>
+          <Input className={inputCls} type="date" value={data.date} onChange={e => set("date", e.target.value)} />
+        </div>
+        <div className="space-y-1.5">
+          <label className={labelCls}>Read Time</label>
+          <Input className={inputCls} placeholder="5 min read" value={data.readTime} onChange={e => set("readTime", e.target.value)} />
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <label className={labelCls}>Excerpt *</label>
+        <Textarea className="border-luxury-charcoal-200 dark:border-luxury-charcoal-700 dark:bg-luxury-charcoal-700/50 rounded-xl text-sm min-h-[70px]" placeholder="Short preview/summary of the post…" value={data.excerpt} onChange={e => set("excerpt", e.target.value)} />
+      </div>
+      <div className="space-y-1.5">
+        <label className={labelCls}>Content *</label>
+        <Textarea className="border-luxury-charcoal-200 dark:border-luxury-charcoal-700 dark:bg-luxury-charcoal-700/50 rounded-xl text-sm min-h-[120px]" placeholder="Full blog post content…" value={data.content} onChange={e => set("content", e.target.value)} />
+      </div>
+      <div className="space-y-1.5">
+        <label className={labelCls}>Cover Image URL</label>
+        <Input className={inputCls} placeholder="https://… or /images/photo.jpg" value={data.image} onChange={e => set("image", e.target.value)} />
+      </div>
+      <div className="space-y-1.5">
+        <label className={labelCls}>Tags (comma separated)</label>
+        <Input className={inputCls} placeholder="wedding, photography, tips" value={data.tags} onChange={e => set("tags", e.target.value)} />
+      </div>
+      <div className="flex items-center gap-6">
+        <div className="flex items-center gap-2">
+          <button onClick={() => set("published", !data.published)}
+            className={`relative w-10 h-5 rounded-full transition-colors ${data.published ? "bg-emerald-500" : "bg-luxury-charcoal-200 dark:bg-luxury-charcoal-600"}`}>
+            <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${data.published ? "translate-x-5" : "translate-x-0.5"}`} />
+          </button>
+          <span className="text-sm text-luxury-charcoal-600 dark:text-luxury-charcoal-400">Published</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => set("featured", !data.featured)}
+            className={`relative w-10 h-5 rounded-full transition-colors ${data.featured ? "bg-luxury-gold-500" : "bg-luxury-charcoal-200 dark:bg-luxury-charcoal-600"}`}>
+            <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${data.featured ? "translate-x-5" : "translate-x-0.5"}`} />
+          </button>
+          <span className="text-sm text-luxury-charcoal-600 dark:text-luxury-charcoal-400">Featured</span>
+        </div>
+      </div>
+      <div className="flex gap-3 pt-2 border-t border-luxury-charcoal-100 dark:border-luxury-charcoal-700">
+        <button className={primaryBtn} onClick={onSubmit} disabled={loading || !data.title || !data.excerpt || !data.content}>
+          {loading && <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
+          {isEdit ? "Save Changes" : "Publish Post"}
+        </button>
+        <button className={outlineBtn} onClick={onCancel}>Cancel</button>
+      </div>
+    </div>
+  )
+}
 
 export default function BlogManager() {
-  const { blogPosts, addBlogPost, updateBlogPost, deleteBlogPost, loading, error } = useDatabase()
-
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const [editingPost, setEditingPost] = useState<{id: string; title: string; content: string; author: string; category: string; tags: string; image: string; featured: boolean; published: boolean; readTime: string} | null>(null)
-  const [filterCategory, setFilterCategory] = useState<string>("all")
-  const [newPost, setNewPost] = useState({
-    title: "",
-    excerpt: "",
-    content: "",
-    author: "",
-    category: "",
-    tags: "",
-    image: "",
-    featured: false,
-    published: true,
-    readTime: ""
-  })
-
-  const categories = ["General", "Wedding", "Portrait", "Tips", "Behind the Scenes", "Equipment"]
-
-  const handleAddPost = async () => {
-    if (newPost.title && newPost.content && newPost.author) {
-      try {
-        await addBlogPost({
-          ...newPost,
-          tags: newPost.tags.split(',').map(tag => tag.trim()).filter(tag => tag),
-          views: 0,
-          likes: 0,
-          date: new Date().toISOString().split('T')[0]
-        })
-        setNewPost({
-          title: "",
-          excerpt: "",
-          content: "",
-          author: "",
-          category: "",
-          tags: "",
-          image: "",
-          featured: false,
-          published: true,
-          readTime: ""
-        })
-        setIsAddDialogOpen(false)
-      } catch (error) {
-        console.error('Failed to add blog post:', error)
-      }
-    }
-  }
-
-  const handleEditPost = (post: BlogPost) => {
-    setEditingPost(post)
-    setNewPost({
-      title: post.title,
-      excerpt: post.excerpt || '',
-      content: post.content,
-      author: post.author,
-      category: post.category,
-      tags: Array.isArray(post.tags) ? post.tags.join(', ') : (post.tags || ''),
-      image: post.image,
-      featured: post.featured,
-      published: post.published,
-      readTime: post.readTime
-    })
-  }
-
-  const handleUpdatePost = async () => {
-    if (!editingPost) return
-    try {
-      await updateBlogPost(editingPost.id, {
-        ...newPost,
-        tags: newPost.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
-      })
-      setEditingPost(null)
-      setNewPost({
-        title: "",
-        excerpt: "",
-        content: "",
-        author: "",
-        category: "",
-        tags: "",
-        image: "",
-        featured: false,
-        published: true,
-        readTime: ""
-      })
-    } catch (error) {
-      console.error('Failed to update blog post:', error)
-    }
-  }
-
-  const handleDeletePost = async (id: string) => {
-    if (confirm("Are you sure you want to delete this blog post?")) {
-      try {
-        await deleteBlogPost(id)
-      } catch (error) {
-        console.error('Failed to delete blog post:', error)
-      }
-    }
-  }
-
-  const filteredPosts = filterCategory === "all" 
-    ? blogPosts 
-    : blogPosts.filter(post => post.category === filterCategory)
+  const { blogPosts, addBlogPost, updateBlogPost, deleteBlogPost } = useDatabase()
+  const [search, setSearch] = useState("")
+  const [filterStatus, setFilterStatus] = useState("all")
+  const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null)
+  const [isAddOpen, setIsAddOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [formData, setFormData] = useState<FormData>(emptyForm)
+  const [submitting, setSubmitting] = useState(false)
 
   const stats = {
     total: blogPosts.length,
     published: blogPosts.filter(p => p.published).length,
     draft: blogPosts.filter(p => !p.published).length,
     featured: blogPosts.filter(p => p.featured).length,
-    totalViews: blogPosts.reduce((sum, p) => sum + (p.views || 0), 0)
+    views: blogPosts.reduce((s, p) => s + (p.views || 0), 0),
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-      </div>
-    )
+  const filtered = blogPosts.filter(p => {
+    const matchSearch = !search || p.title.toLowerCase().includes(search.toLowerCase()) || p.excerpt.toLowerCase().includes(search.toLowerCase())
+    const matchStatus = filterStatus === "all" || (filterStatus === "published" && p.published) || (filterStatus === "draft" && !p.published) || (filterStatus === "featured" && p.featured)
+    return matchSearch && matchStatus
+  })
+
+  const openEdit = (post: BlogPost) => {
+    setSelectedPost(post)
+    setFormData({ title: post.title, excerpt: post.excerpt, content: post.content, author: post.author, date: post.date, readTime: post.readTime, category: post.category, tags: (post.tags || []).join(", "), image: post.image, featured: post.featured, published: post.published })
+    setIsEditOpen(true)
   }
 
-  if (error) {
-    return (
-      <div className="p-8 text-center">
-        <p className="text-red-600">Error: {error}</p>
-      </div>
-    )
+  const toPost = (d: FormData) => ({ ...d, tags: d.tags.split(",").map(t => t.trim()).filter(Boolean), views: 0, likes: 0 })
+
+  const handleAdd = async () => {
+    setSubmitting(true)
+    try { await addBlogPost(toPost(formData)); setIsAddOpen(false); setFormData(emptyForm) } catch { } finally { setSubmitting(false) }
+  }
+
+  const handleEdit = async () => {
+    if (!selectedPost) return
+    setSubmitting(true)
+    try { await updateBlogPost(selectedPost.id, toPost(formData)); setIsEditOpen(false) } catch { } finally { setSubmitting(false) }
+  }
+
+  const handleDelete = async (id: string) => {
+    try { await deleteBlogPost(id); setDeleteConfirm(null) } catch { }
+  }
+
+  const togglePublished = async (post: BlogPost) => {
+    try { await updateBlogPost(post.id, { published: !post.published }) } catch { }
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Blog Management</h2>
-          <p className="text-muted-foreground">Manage your blog posts and content</p>
-        </div>
-        
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Blog Post
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingPost ? 'Edit Blog Post' : 'Add New Blog Post'}</DialogTitle>
-              <DialogDescription>
-                {editingPost ? 'Update the blog post details below.' : 'Create a new blog post for your website.'}
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="title">Title *</Label>
-                  <Input
-                    id="title"
-                    value={newPost.title}
-                    onChange={(e) => setNewPost({...newPost, title: e.target.value})}
-                    placeholder="Blog post title"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="author">Author *</Label>
-                  <Input
-                    id="author"
-                    value={newPost.author}
-                    onChange={(e) => setNewPost({...newPost, author: e.target.value})}
-                    placeholder="Author name"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="category">Category</Label>
-                  <Select value={newPost.category} onValueChange={(value) => setNewPost({...newPost, category: value})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category} value={category}>{category}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="tags">Tags (comma separated)</Label>
-                  <Input
-                    id="tags"
-                    value={newPost.tags}
-                    onChange={(e) => setNewPost({...newPost, tags: e.target.value})}
-                    placeholder="photography, wedding, tips"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="readTime">Read Time</Label>
-                  <Input
-                    id="readTime"
-                    value={newPost.readTime}
-                    onChange={(e) => setNewPost({...newPost, readTime: e.target.value})}
-                    placeholder="5 min read"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="image">Featured Image URL</Label>
-                  <Input
-                    id="image"
-                    value={newPost.image}
-                    onChange={(e) => setNewPost({...newPost, image: e.target.value})}
-                    placeholder="https://example.com/image.jpg"
-                  />
-                </div>
-                
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="featured"
-                      checked={newPost.featured}
-                      onCheckedChange={(checked) => setNewPost({...newPost, featured: checked})}
-                    />
-                    <Label htmlFor="featured">Featured</Label>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="published"
-                      checked={newPost.published}
-                      onCheckedChange={(checked) => setNewPost({...newPost, published: checked})}
-                    />
-                    <Label htmlFor="published">Published</Label>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="excerpt">Excerpt</Label>
-                  <Textarea
-                    id="excerpt"
-                    value={newPost.excerpt}
-                    onChange={(e) => setNewPost({...newPost, excerpt: e.target.value})}
-                    placeholder="Brief description of the blog post"
-                    rows={3}
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="content">Content *</Label>
-                  <Textarea
-                    id="content"
-                    value={newPost.content}
-                    onChange={(e) => setNewPost({...newPost, content: e.target.value})}
-                    placeholder="Blog post content (supports markdown)"
-                    rows={12}
-                  />
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button variant="outline" onClick={() => {
-                setIsAddDialogOpen(false)
-                setEditingPost(null)
-                setNewPost({
-                  title: "",
-                  excerpt: "",
-                  content: "",
-                  author: "",
-                  category: "",
-                  tags: "",
-                  image: "",
-                  featured: false,
-                  published: true,
-                  readTime: ""
-                })
-              }}>
-                Cancel
-              </Button>
-              <Button onClick={editingPost ? handleUpdatePost : handleAddPost}>
-                {editingPost ? 'Update Post' : 'Create Post'}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Total Posts</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
-              </div>
-              <BookOpen className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Published</p>
-                <p className="text-2xl font-bold">{stats.published}</p>
-              </div>
-              <Eye className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Drafts</p>
-                <p className="text-2xl font-bold">{stats.draft}</p>
-              </div>
-              <Edit className="h-8 w-8 text-yellow-500" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Featured</p>
-                <p className="text-2xl font-bold">{stats.featured}</p>
-              </div>
-              <Tag className="h-8 w-8 text-purple-500" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Total Views</p>
-                <p className="text-2xl font-bold">{stats.totalViews}</p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-red-500" />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        {[
+          { label: "Total Posts", value: stats.total, color: "text-luxury-charcoal-900 dark:text-white" },
+          { label: "Published", value: stats.published, color: "text-emerald-600" },
+          { label: "Drafts", value: stats.draft, color: "text-amber-600" },
+          { label: "Featured", value: stats.featured, color: "text-luxury-gold-600" },
+          { label: "Total Views", value: stats.views.toLocaleString(), color: "text-blue-600" },
+        ].map(({ label, value, color }) => (
+          <div key={label} className={`${cardCls} p-4`}>
+            <p className="text-xs font-semibold text-luxury-charcoal-500 dark:text-luxury-charcoal-400 uppercase tracking-wider mb-1">{label}</p>
+            <p className={`text-2xl font-bold ${color}`}>{value}</p>
+          </div>
+        ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-4">
-        <Select value={filterCategory} onValueChange={setFilterCategory}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Filter by category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {categories.map((category) => (
-              <SelectItem key={category} value={category}>{category}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* Toolbar */}
+      <div className={`${cardCls} p-4`}>
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-luxury-charcoal-400" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search posts…"
+              className="w-full pl-9 pr-3 h-11 rounded-xl border border-luxury-charcoal-200 dark:border-luxury-charcoal-700 bg-white dark:bg-luxury-charcoal-700/50 text-sm focus:ring-2 focus:ring-luxury-gold-400/30 focus:border-luxury-gold-400 outline-none transition-all" />
+          </div>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-36 h-11 rounded-xl border-luxury-charcoal-200 dark:border-luxury-charcoal-700 bg-white dark:bg-luxury-charcoal-700/50">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Posts</SelectItem>
+              <SelectItem value="published">Published</SelectItem>
+              <SelectItem value="draft">Drafts</SelectItem>
+              <SelectItem value="featured">Featured</SelectItem>
+            </SelectContent>
+          </Select>
+          <button className={`${primaryBtn} sm:ml-auto`} onClick={() => { setFormData(emptyForm); setIsAddOpen(true) }}>
+            <Plus className="w-4 h-4" />New Post
+          </button>
+        </div>
       </div>
 
-      {/* Blog Posts List */}
-      <div className="space-y-4">
-        {filteredPosts.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <BookOpen className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Blog Posts Found</h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                {filterCategory === "all"
-                  ? "No blog posts have been created yet. Start by adding your first post."
-                  : `No posts found in the ${filterCategory} category. Try changing the filter or add new posts.`
-                }
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          filteredPosts.map((post) => (
-            <Card key={post.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex gap-4">
-                  {/* Featured Image */}
-                  <div className="flex-shrink-0">
-                    <Image
-                      src={post.image || "/placeholder.svg?height=100&width=150"}
-                      alt={post.title}
-                      width={150}
-                      height={100}
-                      className="rounded-lg object-cover"
-                    />
-                  </div>
-                  
-                  {/* Content */}
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                          {post.title}
-                        </h3>
-                        <p className="text-gray-600 dark:text-gray-400 text-sm">
-                          {post.excerpt}
-                        </p>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditPost(post)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeletePost(post.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-4 text-sm text-gray-500">
-                      <div className="flex items-center gap-1">
-                        <User className="w-4 h-4" />
-                        {post.author}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        {new Date(post.date || post.createdAt).toLocaleDateString()}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Eye className="w-4 h-4" />
-                        {post.views || 0} views
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <TrendingUp className="w-4 h-4" />
-                        {post.likes || 0} likes
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary">{post.category}</Badge>
-                      {post.featured && <Badge variant="default">Featured</Badge>}
-                      <Badge variant={post.published ? "default" : "secondary"}>
-                        {post.published ? "Published" : "Draft"}
-                      </Badge>
-                      {Array.isArray(post.tags) && post.tags.slice(0, 3).map((tag, index) => (
-                        <Badge key={index} variant="outline">{tag}</Badge>
-                      ))}
-                    </div>
+      {/* Blog Post List */}
+      {filtered.length === 0 ? (
+        <div className={`${cardCls} flex flex-col items-center justify-center py-16 text-luxury-charcoal-400`}>
+          <BookOpen className="w-12 h-12 mb-3 opacity-40" />
+          <p className="font-medium">No blog posts found</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {filtered.map(post => (
+            <div key={post.id} className={`${cardCls} overflow-hidden`}>
+              {post.image && (
+                <div className="relative h-36 bg-luxury-charcoal-100 dark:bg-luxury-charcoal-700">
+                  <Image src={post.image} alt={post.title} fill className="object-cover" />
+                  <div className="absolute top-2 left-2 flex gap-1.5">
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${post.published ? "bg-emerald-500 text-white" : "bg-amber-500 text-white"}`}>{post.published ? "Published" : "Draft"}</span>
+                    {post.featured && <span className="text-xs font-semibold px-2 py-0.5 bg-luxury-gold-500 text-white rounded">Featured</span>}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
+              )}
+              <div className="p-4">
+                {!post.image && (
+                  <div className="flex gap-1.5 mb-2">
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${post.published ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"}`}>{post.published ? "Published" : "Draft"}</span>
+                    {post.featured && <span className="text-xs font-semibold px-2 py-0.5 bg-luxury-gold-100 text-luxury-gold-700 dark:bg-luxury-gold-900/30 dark:text-luxury-gold-400 rounded">Featured</span>}
+                  </div>
+                )}
+                <p className="font-semibold text-luxury-charcoal-900 dark:text-white line-clamp-2">{post.title}</p>
+                <p className="text-xs text-luxury-charcoal-400 mt-1">{post.category} · {post.readTime} · {post.date}</p>
+                <p className="text-sm text-luxury-charcoal-500 dark:text-luxury-charcoal-400 mt-2 line-clamp-2">{post.excerpt}</p>
+                <div className="flex items-center gap-3 mt-3 pt-3 border-t border-luxury-charcoal-50 dark:border-luxury-charcoal-700/50">
+                  <span className="text-xs text-luxury-charcoal-400 flex items-center gap-1"><Eye className="w-3.5 h-3.5" />{post.views || 0}</span>
+                  <span className="text-xs text-luxury-charcoal-400 flex items-center gap-1"><Heart className="w-3.5 h-3.5" />{post.likes || 0}</span>
+                  <div className="flex items-center gap-1 ml-auto">
+                    <button onClick={() => togglePublished(post)} title={post.published ? "Unpublish" : "Publish"}
+                      className={`p-1.5 rounded-lg transition-colors ${post.published ? "text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20" : "text-luxury-charcoal-400 hover:text-emerald-500 hover:bg-emerald-50"}`}>
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${post.published ? "bg-emerald-500 border-emerald-500" : "border-luxury-charcoal-300"}`}>
+                        {post.published && <div className="w-2 h-2 bg-white rounded-full" />}
+                      </div>
+                    </button>
+                    <button onClick={() => openEdit(post)} className="p-1.5 rounded-lg hover:bg-luxury-charcoal-100 dark:hover:bg-luxury-charcoal-700 text-luxury-charcoal-400 hover:text-luxury-charcoal-700 transition-colors"><Edit className="w-4 h-4" /></button>
+                    <button onClick={() => setDeleteConfirm(post.id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-luxury-charcoal-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add Dialog */}
+      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+        <DialogContent className="max-w-2xl bg-white dark:bg-luxury-charcoal-800 border-luxury-charcoal-100 dark:border-luxury-charcoal-700 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-luxury-charcoal-900 dark:text-white">New Blog Post</DialogTitle>
+            <DialogDescription className="text-luxury-charcoal-500">Create a new blog post for your photography website.</DialogDescription>
+          </DialogHeader>
+          <BlogForm data={formData} onChange={setFormData} onSubmit={handleAdd} onCancel={() => setIsAddOpen(false)} loading={submitting} isEdit={false} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="max-w-2xl bg-white dark:bg-luxury-charcoal-800 border-luxury-charcoal-100 dark:border-luxury-charcoal-700 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-luxury-charcoal-900 dark:text-white">Edit Post</DialogTitle>
+          </DialogHeader>
+          <BlogForm data={formData} onChange={setFormData} onSubmit={handleEdit} onCancel={() => setIsEditOpen(false)} loading={submitting} isEdit />
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm */}
+      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <DialogContent className="max-w-sm bg-white dark:bg-luxury-charcoal-800 border-luxury-charcoal-100 dark:border-luxury-charcoal-700 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-luxury-charcoal-900 dark:text-white">Delete Post?</DialogTitle>
+            <DialogDescription className="text-luxury-charcoal-500">This blog post will be permanently deleted.</DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 mt-2">
+            <button className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-xl transition-colors" onClick={() => deleteConfirm && handleDelete(deleteConfirm)}>Delete</button>
+            <button className={`flex-1 ${outlineBtn} justify-center`} onClick={() => setDeleteConfirm(null)}>Cancel</button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
