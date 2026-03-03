@@ -1,361 +1,251 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-// import { EnhancedButton } from "@/components/ui/enhanced-button"
-// import { EnhancedCard } from "@/components/ui/enhanced-card"
-import { Upload, Trash2, Plus, Image as ImageIcon, Eye, Edit } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Upload, Trash2, Plus, Image as ImageIcon, Eye, Edit, Search, Star } from "lucide-react"
 import Image from "next/image"
-import { useDatabase } from "@/lib/database-context"
+import { useDatabase, type PortfolioItem } from "@/lib/database-context"
 
-interface PortfolioItem {
-  id: string
-  title: string
-  description: string
-  category: string
-  imageUrl: string
-  featured: boolean
-  createdAt: string
+const cardCls = "bg-white dark:bg-luxury-charcoal-800 rounded-2xl border border-luxury-charcoal-100 dark:border-luxury-charcoal-700/50 shadow-sm"
+const inputCls = "border-luxury-charcoal-200 dark:border-luxury-charcoal-700 dark:bg-luxury-charcoal-700/50 rounded-xl h-11 text-sm focus:ring-2 focus:ring-luxury-gold-400/30 focus:border-luxury-gold-400 transition-all"
+const labelCls = "text-xs font-semibold text-luxury-charcoal-600 dark:text-luxury-charcoal-400 uppercase tracking-wider"
+const primaryBtn = "inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-luxury-gold-500 to-luxury-gold-600 hover:from-luxury-gold-600 hover:to-luxury-gold-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-all duration-200 disabled:opacity-50"
+const outlineBtn = "inline-flex items-center gap-2 px-3 py-2 border border-luxury-charcoal-200 dark:border-luxury-charcoal-600 text-luxury-charcoal-700 dark:text-luxury-charcoal-300 text-sm font-medium rounded-xl hover:bg-luxury-charcoal-50 dark:hover:bg-luxury-charcoal-700/50 transition-all duration-200"
+const dangerBtn = "inline-flex items-center gap-2 px-3 py-2 text-red-600 dark:text-red-400 text-sm font-medium rounded-xl border border-red-200 dark:border-red-800/50 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200"
+
+const CATEGORIES = ["Wedding", "Portrait", "Family", "Event", "Corporate", "Fashion", "Pre-Wedding"]
+
+interface FormData {
+  title: string; description: string; category: string; imageUrl: string; featured: boolean
+}
+const emptyForm: FormData = { title: "", description: "", category: "", imageUrl: "", featured: false }
+
+function PortfolioForm({ data, onChange, onSubmit, onCancel, loading, isEdit }: {
+  data: FormData; onChange: (d: FormData) => void; onSubmit: () => void
+  onCancel: () => void; loading: boolean; isEdit: boolean
+}) {
+  const set = (k: keyof FormData, v: string | boolean) => onChange({ ...data, [k]: v })
+  return (
+    <div className="space-y-4">
+      <div className="space-y-1.5">
+        <label className={labelCls}>Title *</label>
+        <Input className={inputCls} placeholder="Portfolio item title" value={data.title} onChange={e => set("title", e.target.value)} />
+      </div>
+      <div className="space-y-1.5">
+        <label className={labelCls}>Description</label>
+        <Textarea className="border-luxury-charcoal-200 dark:border-luxury-charcoal-700 dark:bg-luxury-charcoal-700/50 rounded-xl text-sm min-h-[80px]" placeholder="Brief description of this photo..." value={data.description} onChange={e => set("description", e.target.value)} />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <label className={labelCls}>Category *</label>
+          <Select value={data.category} onValueChange={v => set("category", v)}>
+            <SelectTrigger className={inputCls}><SelectValue placeholder="Select category" /></SelectTrigger>
+            <SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <label className={labelCls}>Featured</label>
+          <div className="h-11 flex items-center">
+            <button onClick={() => set("featured", !data.featured)}
+              className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${data.featured ? "bg-luxury-gold-500" : "bg-luxury-charcoal-200 dark:bg-luxury-charcoal-600"}`}>
+              <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${data.featured ? "translate-x-6" : "translate-x-0.5"}`} />
+            </button>
+            <span className="ml-2 text-sm text-luxury-charcoal-600 dark:text-luxury-charcoal-400">Show as featured</span>
+          </div>
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <label className={labelCls}>Image URL *</label>
+        <Input className={inputCls} placeholder="https://... or /images/photo.jpg" value={data.imageUrl} onChange={e => set("imageUrl", e.target.value)} />
+      </div>
+      {data.imageUrl && (
+        <div className="relative w-full h-40 rounded-xl overflow-hidden border border-luxury-charcoal-100 dark:border-luxury-charcoal-700">
+          <Image src={data.imageUrl} alt="Preview" fill className="object-cover" onError={() => {}} />
+        </div>
+      )}
+      <div className="flex gap-3 pt-2 border-t border-luxury-charcoal-100 dark:border-luxury-charcoal-700">
+        <button className={primaryBtn} onClick={onSubmit} disabled={loading || !data.title || !data.category || !data.imageUrl}>
+          {loading && <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
+          {isEdit ? "Save Changes" : "Add to Portfolio"}
+        </button>
+        <button className={outlineBtn} onClick={onCancel}>Cancel</button>
+      </div>
+    </div>
+  )
 }
 
 export default function PortfolioManager() {
   const { portfolioItems, addPortfolioItem, updatePortfolioItem, deletePortfolioItem } = useDatabase()
+  const [search, setSearch] = useState("")
+  const [filterCategory, setFilterCategory] = useState("all")
+  const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null)
+  const [isAddOpen, setIsAddOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [formData, setFormData] = useState<FormData>(emptyForm)
+  const [submitting, setSubmitting] = useState(false)
 
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const [editingItem, setEditingItem] = useState<PortfolioItem | null>(null)
-  const [newItem, setNewItem] = useState({
-    title: "",
-    description: "",
-    category: "",
-    imageUrl: "",
-    featured: false
+  const filtered = portfolioItems.filter(p => {
+    const matchSearch = !search || p.title.toLowerCase().includes(search.toLowerCase()) || p.category.toLowerCase().includes(search.toLowerCase())
+    const matchCat = filterCategory === "all" || p.category === filterCategory
+    return matchSearch && matchCat
   })
 
-  const categories = ["Wedding", "Portrait", "Family", "Event", "Corporate", "Fashion"]
+  const categories = Array.from(new Set(portfolioItems.map(p => p.category))).filter(Boolean)
 
-  const handleAddItem = async () => {
-    if (newItem.title && newItem.description && newItem.category) {
-      try {
-        await addPortfolioItem({
-          title: newItem.title,
-          description: newItem.description,
-          category: newItem.category,
-          imageUrl: newItem.imageUrl || "/placeholder.svg?height=300&width=400",
-          featured: newItem.featured
-        })
-        setNewItem({ title: "", description: "", category: "", imageUrl: "", featured: false })
-        setIsAddDialogOpen(false)
-      } catch (error) {
-        console.error('Failed to add portfolio item:', error)
-      }
-    }
+  const openEdit = (item: PortfolioItem) => {
+    setSelectedItem(item)
+    setFormData({ title: item.title, description: item.description, category: item.category, imageUrl: item.imageUrl, featured: item.featured })
+    setIsEditOpen(true)
   }
 
-  const handleEditItem = (item: PortfolioItem) => {
-    setEditingItem(item)
-    setNewItem({
-      title: item.title,
-      description: item.description,
-      category: item.category,
-      imageUrl: item.imageUrl,
-      featured: item.featured
-    })
-  }
-
-  const handleUpdateItem = async () => {
-    if (!editingItem) return
+  const handleAdd = async () => {
+    setSubmitting(true)
     try {
-      await updatePortfolioItem(editingItem.id, {
-        title: newItem.title,
-        description: newItem.description,
-        category: newItem.category,
-        imageUrl: newItem.imageUrl,
-        featured: newItem.featured
-      })
-      setEditingItem(null)
-      setNewItem({ title: "", description: "", category: "", imageUrl: "", featured: false })
-    } catch (error) {
-      console.error('Failed to update portfolio item:', error)
-    }
+      await addPortfolioItem({ ...formData, tags: [] })
+      setIsAddOpen(false); setFormData(emptyForm)
+    } catch { } finally { setSubmitting(false) }
   }
 
-  const handleDeleteItem = async (id: string) => {
-    if (confirm("Are you sure you want to delete this item?")) {
-      try {
-        await deletePortfolioItem(id)
-      } catch (error) {
-        console.error('Failed to delete portfolio item:', error)
-      }
-    }
+  const handleEdit = async () => {
+    if (!selectedItem) return
+    setSubmitting(true)
+    try {
+      await updatePortfolioItem(selectedItem.id, formData)
+      setIsEditOpen(false)
+    } catch { } finally { setSubmitting(false) }
   }
 
-  const toggleFeatured = async (id: string) => {
-    const item = portfolioItems.find(item => item.id === id)
-    if (item) {
-      try {
-        await updatePortfolioItem(id, { featured: !item.featured })
-      } catch (error) {
-        console.error('Failed to update portfolio item:', error)
-      }
-    }
+  const handleDelete = async (id: string) => {
+    try { await deletePortfolioItem(id); setDeleteConfirm(null) } catch { }
+  }
+
+  const toggleFeatured = async (item: PortfolioItem) => {
+    try { await updatePortfolioItem(item.id, { featured: !item.featured }) } catch { }
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Portfolio Management</h2>
-          <p className="text-gray-600 dark:text-gray-400">Manage your photography portfolio</p>
-        </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="gradient">
-              <Plus className="w-4 h-4 mr-2" />
-              Add New Item
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add Portfolio Item</DialogTitle>
-              <DialogDescription>Add a new item to your portfolio</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  value={newItem.title}
-                  onChange={(e) => setNewItem({...newItem, title: e.target.value})}
-                  placeholder="Enter title"
-                />
-              </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={newItem.description}
-                  onChange={(e) => setNewItem({...newItem, description: e.target.value})}
-                  placeholder="Enter description"
-                />
-              </div>
-              <div>
-                <Label htmlFor="category">Category</Label>
-                <Select value={newItem.category} onValueChange={(value) => setNewItem({...newItem, category: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map(category => (
-                      <SelectItem key={category} value={category}>{category}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="imageUrl">Image URL</Label>
-                <Input
-                  id="imageUrl"
-                  value={newItem.imageUrl}
-                  onChange={(e) => setNewItem({...newItem, imageUrl: e.target.value})}
-                  placeholder="Enter image URL"
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="featured"
-                  checked={newItem.featured}
-                  onChange={(e) => setNewItem({...newItem, featured: e.target.checked})}
-                />
-                <Label htmlFor="featured">Featured item</Label>
-              </div>
-              <Button onClick={handleAddItem} className="w-full">
-                Add Item
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Total Items</p>
-                <p className="text-2xl font-bold">{portfolioItems.length}</p>
-              </div>
-              <ImageIcon className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Featured</p>
-                <p className="text-2xl font-bold">{portfolioItems.filter(item => item.featured).length}</p>
-              </div>
-              <Eye className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Categories</p>
-                <p className="text-2xl font-bold">{new Set(portfolioItems.map(item => item.category)).size}</p>
-              </div>
-              <Upload className="h-8 w-8 text-purple-500" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">This Month</p>
-                <p className="text-2xl font-bold">
-                  {portfolioItems.filter(item => 
-                    new Date(item.createdAt).getMonth() === new Date().getMonth()
-                  ).length}
-                </p>
-              </div>
-              <Plus className="h-8 w-8 text-orange-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Portfolio Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {portfolioItems.map((item) => (
-          <Card key={item.id} className="overflow-hidden">
-            <div className="relative aspect-video">
-              <Image
-                src={item.imageUrl}
-                alt={item.title}
-                fill
-                className="object-cover"
-              />
-              {item.featured && (
-                <div className="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                  Featured
-                </div>
-              )}
-            </div>
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg">{item.title}</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{item.description}</p>
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
-                      {item.category}
-                    </span>
-                    <span className="text-xs text-gray-500">{item.createdAt}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 mt-4">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleEditItem(item)}
-                >
-                  <Edit className="w-4 h-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => toggleFeatured(item.id)}
-                  className={item.featured ? "bg-yellow-100 dark:bg-yellow-900" : ""}
-                >
-                  <Eye className="w-4 h-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleDeleteItem(item.id)}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { label: "Total Photos", value: portfolioItems.length },
+          { label: "Featured", value: portfolioItems.filter(p => p.featured).length },
+          { label: "Categories", value: categories.length },
+          { label: "Recent (30d)", value: portfolioItems.filter(p => new Date(p.createdAt) > new Date(Date.now() - 30 * 86400000)).length },
+        ].map(({ label, value }) => (
+          <div key={label} className={`${cardCls} p-4`}>
+            <p className="text-xs font-semibold text-luxury-charcoal-500 dark:text-luxury-charcoal-400 uppercase tracking-wider mb-1">{label}</p>
+            <p className="text-2xl font-bold text-luxury-charcoal-900 dark:text-white">{value}</p>
+          </div>
         ))}
       </div>
 
-      {/* Edit Dialog */}
-      <Dialog open={!!editingItem} onOpenChange={() => setEditingItem(null)}>
-        <DialogContent className="max-w-md">
+      {/* Toolbar */}
+      <div className={`${cardCls} p-4`}>
+        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-luxury-charcoal-400" />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search portfolio…"
+              className="w-full pl-9 pr-3 h-11 rounded-xl border border-luxury-charcoal-200 dark:border-luxury-charcoal-700 bg-white dark:bg-luxury-charcoal-700/50 text-sm focus:ring-2 focus:ring-luxury-gold-400/30 focus:border-luxury-gold-400 outline-none transition-all" />
+          </div>
+          <Select value={filterCategory} onValueChange={setFilterCategory}>
+            <SelectTrigger className="w-44 h-11 rounded-xl border-luxury-charcoal-200 dark:border-luxury-charcoal-700 bg-white dark:bg-luxury-charcoal-700/50">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <button className={`${primaryBtn} sm:ml-auto`} onClick={() => { setFormData(emptyForm); setIsAddOpen(true) }}>
+            <Plus className="w-4 h-4" />Add Photo
+          </button>
+        </div>
+      </div>
+
+      {/* Grid */}
+      {filtered.length === 0 ? (
+        <div className={`${cardCls} flex flex-col items-center justify-center py-16 text-luxury-charcoal-400`}>
+          <ImageIcon className="w-12 h-12 mb-3 opacity-40" />
+          <p className="font-medium">No portfolio items found</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map(item => (
+            <div key={item.id} className={`${cardCls} overflow-hidden group`}>
+              <div className="relative h-48 bg-luxury-charcoal-100 dark:bg-luxury-charcoal-700">
+                <Image src={item.imageUrl || "/placeholder.svg"} alt={item.title} fill className="object-cover" />
+                {item.featured && (
+                  <div className="absolute top-2 left-2 bg-luxury-gold-500 text-white text-xs font-semibold px-2 py-1 rounded-lg flex items-center gap-1">
+                    <Star className="w-3 h-3 fill-white" />Featured
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-200 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+                  <button onClick={() => openEdit(item)} className="p-2 bg-white rounded-xl shadow-lg hover:bg-luxury-gold-50 transition-colors" title="Edit">
+                    <Edit className="w-4 h-4 text-luxury-charcoal-700" />
+                  </button>
+                  <button onClick={() => setDeleteConfirm(item.id)} className="p-2 bg-white rounded-xl shadow-lg hover:bg-red-50 transition-colors" title="Delete">
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </button>
+                </div>
+              </div>
+              <div className="p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-luxury-charcoal-900 dark:text-white text-sm truncate">{item.title}</p>
+                    <p className="text-xs text-luxury-charcoal-400 mt-0.5">{item.category}</p>
+                  </div>
+                  <button onClick={() => toggleFeatured(item)} title={item.featured ? "Remove featured" : "Mark as featured"}
+                    className={`p-1.5 rounded-lg transition-colors flex-shrink-0 ${item.featured ? "text-luxury-gold-500 bg-luxury-gold-50 dark:bg-luxury-gold-900/20" : "text-luxury-charcoal-300 hover:text-luxury-gold-400"}`}>
+                    <Star className={`w-4 h-4 ${item.featured ? "fill-luxury-gold-500" : ""}`} />
+                  </button>
+                </div>
+                {item.description && <p className="text-xs text-luxury-charcoal-500 dark:text-luxury-charcoal-400 mt-1 line-clamp-2">{item.description}</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add Dialog */}
+      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+        <DialogContent className="max-w-lg bg-white dark:bg-luxury-charcoal-800 border-luxury-charcoal-100 dark:border-luxury-charcoal-700 rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Edit Portfolio Item</DialogTitle>
-            <DialogDescription>Update the portfolio item details</DialogDescription>
+            <DialogTitle className="text-xl font-bold text-luxury-charcoal-900 dark:text-white">Add Portfolio Item</DialogTitle>
+            <DialogDescription className="text-luxury-charcoal-500">Add a new photo to your portfolio gallery.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit-title">Title</Label>
-              <Input
-                id="edit-title"
-                value={newItem.title}
-                onChange={(e) => setNewItem({...newItem, title: e.target.value})}
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-description">Description</Label>
-              <Textarea
-                id="edit-description"
-                value={newItem.description}
-                onChange={(e) => setNewItem({...newItem, description: e.target.value})}
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-category">Category</Label>
-              <Select value={newItem.category} onValueChange={(value) => setNewItem({...newItem, category: value})}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map(category => (
-                    <SelectItem key={category} value={category}>{category}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="edit-imageUrl">Image URL</Label>
-              <Input
-                id="edit-imageUrl"
-                value={newItem.imageUrl}
-                onChange={(e) => setNewItem({...newItem, imageUrl: e.target.value})}
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="edit-featured"
-                checked={newItem.featured}
-                onChange={(e) => setNewItem({...newItem, featured: e.target.checked})}
-              />
-              <Label htmlFor="edit-featured">Featured item</Label>
-            </div>
-            <Button onClick={handleUpdateItem} className="w-full">
-              Update Item
-            </Button>
+          <PortfolioForm data={formData} onChange={setFormData} onSubmit={handleAdd} onCancel={() => setIsAddOpen(false)} loading={submitting} isEdit={false} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="max-w-lg bg-white dark:bg-luxury-charcoal-800 border-luxury-charcoal-100 dark:border-luxury-charcoal-700 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-luxury-charcoal-900 dark:text-white">Edit Portfolio Item</DialogTitle>
+            <DialogDescription className="text-luxury-charcoal-500">Update the details for "{selectedItem?.title}"</DialogDescription>
+          </DialogHeader>
+          <PortfolioForm data={formData} onChange={setFormData} onSubmit={handleEdit} onCancel={() => setIsEditOpen(false)} loading={submitting} isEdit />
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm */}
+      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <DialogContent className="max-w-sm bg-white dark:bg-luxury-charcoal-800 border-luxury-charcoal-100 dark:border-luxury-charcoal-700 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-luxury-charcoal-900 dark:text-white">Delete Photo?</DialogTitle>
+            <DialogDescription className="text-luxury-charcoal-500">This photo will be permanently removed from your portfolio.</DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-3 mt-2">
+            <button className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-xl transition-colors" onClick={() => deleteConfirm && handleDelete(deleteConfirm)}>Delete</button>
+            <button className={`flex-1 ${outlineBtn} justify-center`} onClick={() => setDeleteConfirm(null)}>Cancel</button>
           </div>
         </DialogContent>
       </Dialog>
     </div>
   )
 }
-
