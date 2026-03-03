@@ -50,7 +50,7 @@ export default function AdminDashboard() {
   const [activeSection, setActiveSection] = useState("overview")
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [loginError, setLoginError] = useState("")
-  const { stats, portfolioItems, bookings, messages } = useDatabase()
+  const { stats, portfolioItems, bookings, messages, error } = useDatabase()
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
@@ -228,6 +228,18 @@ export default function AdminDashboard() {
               transition={{ duration: 0.25 }}>
               {activeSection === "overview" && (
                 <div className="space-y-6">
+                  {/* DB Error Banner */}
+                  {error && (
+                    <div className="flex items-start gap-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-2xl px-5 py-4">
+                      <div className="w-8 h-8 rounded-xl bg-red-100 dark:bg-red-900/40 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-red-500 text-base">⚠</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-red-700 dark:text-red-400">Database not connected</p>
+                        <p className="text-xs text-red-500 mt-0.5">Add <code className="font-mono bg-red-100 dark:bg-red-900/40 px-1 rounded">DATABASE_URL</code> to your <code className="font-mono bg-red-100 dark:bg-red-900/40 px-1 rounded">.env.local</code> file to enable data persistence. Stats below show 0 until connected.</p>
+                      </div>
+                    </div>
+                  )}
                   {/* KPI Cards */}
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
                     {[
