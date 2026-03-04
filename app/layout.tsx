@@ -59,6 +59,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-M75R3SVR"
             height="0" width="0" style={{ display: "none", visibility: "hidden" }}></iframe>
         </noscript>
+        {/* Google tag (gtag.js) */}
+        <Script async src="https://www.googletagmanager.com/gtag/js?id=G-CWR7G80ZMX"></Script>
+        <Script id="google-analytics-2">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-CWR7G80ZMX');
+        `}
+        </Script>
 
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ToastProvider>
